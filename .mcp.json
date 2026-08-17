@@ -1,0 +1,14 @@
+{
+  "mcpServers": {
+    "marketing-hub": {
+      "command": "python",
+      "args": [
+        "-m",
+        "hub.cli",
+        "mcp",
+        "--config",
+        "C:\\Users\\Laptop-994\\marketing-hub\\config.yaml"
+      ]
+    }
+  }
+}
