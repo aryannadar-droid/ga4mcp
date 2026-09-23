@@ -1,0 +1,15 @@
+{
+  "name": "cro-smith-skills-scripts",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Live evidence scripts for the cro-smith-skills Claude Code skill",
+  "scripts": {
+    "design": "node design-probe.js",
+    "band": "node band-scan.js",
+    "evidence": "node site-evidence.js",
+    "shoot": "node shoot.js"
+  },
+  "dependencies": {
+    "playwright": "^1.58.0"
+  }
+}
