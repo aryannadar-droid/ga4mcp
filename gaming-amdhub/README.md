@@ -9,6 +9,19 @@ npm run build      # typecheck + production build to dist/
 npm run preview    # serve the production build
 ```
 
+### Single-file HTML
+
+```bash
+npm run build:single   # → dist-single/index.html
+```
+
+This build packs everything into one HTML file: JS, CSS, placeholder images, the spec-sheet PDF and the favicon. It opens straight from disk (`file://`) or can go on any static host, which makes it handy for review by email or Slack. The file is about 554 KB (about 181 KB gzipped).
+
+Differences from the normal build:
+- Pages switch in memory, so the address bar stays on the file and the browser Back button doesn't move between pages. Use the "All builds" link instead.
+- GSAP and Lenis are bundled in instead of lazy-loaded.
+- Google Fonts still need a network connection; offline, the page falls back to system fonts.
+
 Stack: Vite 7, React 19, TypeScript, Tailwind CSS 4, Framer Motion 12 (`LazyMotion` + `m`), GSAP 3 + ScrollTrigger (section 5 only, lazy-loaded), and Lenis (lazy-loaded, off when the user prefers reduced motion). The router is a small history router of about 60 lines, so there is no router dependency.
 
 Deep links such as `/upgrade` need a SPA fallback on the host. `public/_redirects` covers Netlify; on other hosts, rewrite `/*` to `/index.html`.

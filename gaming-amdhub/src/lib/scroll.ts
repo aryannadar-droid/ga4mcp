@@ -19,7 +19,10 @@ export function onLenis(fn: (l: Lenis | null) => void) {
 export function scrollToTarget(hash: string, immediate = false) {
   const el = hash.length > 1 ? document.querySelector<HTMLElement>(hash) : null;
   if (!el) return;
-  if (lenis) lenis.scrollTo(el, { offset: -72, immediate });
+  if (lenis) {
+    lenis.resize(); // after a route change Lenis still holds the previous page's height
+    lenis.scrollTo(el, { offset: -72, immediate });
+  }
   else el.scrollIntoView({ behavior: immediate || prefersReducedMotion() ? 'auto' : 'smooth' });
   // Move focus for keyboard and screen-reader users without a second scroll jump.
   if (!el.hasAttribute('tabindex')) el.setAttribute('tabindex', '-1');

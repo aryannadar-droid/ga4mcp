@@ -2,3 +2,5 @@ node_modules
 dist
 *.log
 .lighthouse
+dist-single
+gaming-amdhub.html

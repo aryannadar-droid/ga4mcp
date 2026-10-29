@@ -11,13 +11,33 @@ const subscribe = (l: () => void) => {
     window.removeEventListener('popstate', l);
   };
 };
-const getPath = () => window.location.pathname;
+/**
+ * The single-file build (`npm run build:single`) is opened from disk (file://), where URL
+ * paths can't be routed, so it keeps the current page in memory instead of the address bar.
+ */
+const MEMORY = import.meta.env.MODE === 'single';
+let memoryPath = '/';
+let pendingHash = '';
+const getPath = () => (MEMORY ? memoryPath : window.location.pathname);
 
 export function usePath() {
   return useSyncExternalStore(subscribe, getPath, () => '/');
 }
 
 export function navigate(href: string) {
+  if (MEMORY) {
+    const [path, hash = ''] = href.split('#');
+    const target = path || memoryPath;
+    if (target === memoryPath) {
+      if (hash) scrollToTarget(`#${hash}`);
+      return;
+    }
+    memoryPath = target;
+    pendingHash = hash ? `#${hash}` : '';
+    listeners.forEach((l) => l());
+    if (!hash) window.scrollTo(0, 0);
+    return;
+  }
   const url = new URL(href, window.location.href);
   const samePage = url.pathname === window.location.pathname;
   if (samePage && url.hash) {
@@ -33,10 +53,12 @@ export function navigate(href: string) {
 /** After a route change with a hash, scroll once the new page has rendered. */
 export function useHashScroll(path: string) {
   useEffect(() => {
-    const hash = window.location.hash;
+    const hash = MEMORY ? pendingHash : window.location.hash;
+    pendingHash = '';
     if (!hash) return;
-    const id = window.setTimeout(() => scrollToTarget(hash, true), 60);
-    return () => window.clearTimeout(id);
+    // Second pass re-aims once lazy sections (and the pinned scene's spacer) have settled.
+    const ids = [60, 700].map((ms) => window.setTimeout(() => scrollToTarget(hash, true), ms));
+    return () => ids.forEach((id) => window.clearTimeout(id));
   }, [path]);
 }
 
