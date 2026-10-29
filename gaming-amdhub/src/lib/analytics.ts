@@ -12,7 +12,9 @@ export type EventName =
   | 'store_search'
   | 'partner_click'
   | 'bundle_redeem_click'
-  | 'builder_start';
+  | 'builder_start'
+  /* Added with the 3D views (not in the original brief's list). */
+  | 'view_3d';
 
 export interface EventParams {
   section: string;

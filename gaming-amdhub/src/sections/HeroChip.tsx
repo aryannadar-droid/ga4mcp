@@ -1,7 +1,12 @@
-import { useEffect, useRef, useState } from 'react';
-import { hero } from '../content';
+import { lazy, Suspense, useEffect, useRef, useState } from 'react';
+import { chip3d, hero } from '../content';
+import { track } from '../lib/analytics';
 import { useInView } from '../hooks/useInView';
 import { useReducedMotion } from '../hooks/useReducedMotion';
+
+/** three.js + the viewer only download when someone asks for the 3D view. */
+const loadViewer = () => import('../three/ChipViewerDialog');
+const ChipViewerDialog = lazy(loadViewer);
 
 type OrientationCtor = typeof DeviceOrientationEvent & { requestPermission?: () => Promise<'granted' | 'denied'> };
 
@@ -20,6 +25,7 @@ export function HeroChip() {
   const tiltRef = useRef<HTMLDivElement>(null);
   const [needsPermission, setNeedsPermission] = useState(false);
   const [gyroOn, setGyroOn] = useState(false);
+  const [viewer, setViewer] = useState(false);
 
   useEffect(() => {
     if (reduced || !visible) return;
@@ -133,11 +139,47 @@ export function HeroChip() {
           </div>
         </div>
       </div>
-      {needsPermission && !reduced && (
-        <button type="button" onClick={askGyro} className="btn btn-ghost absolute bottom-0 left-1/2 min-h-10 -translate-x-1/2 text-sm">
-          {hero.tiltPermission}
+      <div className="relative -mt-4 flex flex-wrap justify-center gap-2">
+        <button
+          type="button"
+          className="btn btn-ghost min-h-11 text-sm hover:border-accent"
+          aria-haspopup="dialog"
+          onPointerEnter={loadViewer}
+          onFocus={loadViewer}
+          onClick={() => {
+            setViewer(true);
+            track('view_3d', { section: 'hero', product: 'chip' });
+          }}
+        >
+          <Cube3dIcon />
+          {chip3d.open}
         </button>
+        {needsPermission && !reduced && (
+          <button type="button" onClick={askGyro} className="btn btn-ghost min-h-11 text-sm">
+            {hero.tiltPermission}
+          </button>
+        )}
+      </div>
+      {viewer && (
+        <Suspense
+          fallback={
+            <div role="status" className="fixed inset-0 z-[70] flex items-center justify-center bg-black/70 text-sm text-fg">
+              {chip3d.loading}
+            </div>
+          }
+        >
+          <ChipViewerDialog onClose={() => setViewer(false)} />
+        </Suspense>
       )}
     </div>
+  );
+}
+
+function Cube3dIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" aria-hidden>
+      <path d="M12 2.8l8 4.6v9.2l-8 4.6-8-4.6V7.4z" />
+      <path d="M4 7.4l8 4.6 8-4.6M12 12v9.2" />
+    </svg>
   );
 }

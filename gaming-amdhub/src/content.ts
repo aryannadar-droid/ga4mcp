@@ -270,20 +270,105 @@ export const fpsScene = {
 
 export const buildTeaser = {
   eyebrow: 'Build your PC',
-  title: 'Snap a build together in a minute',
-  sub: 'Pick parts, see the total and the frames you’ll get. Save it or send it to a seller.',
+  title: 'See your build inside the case',
+  sub: 'Watch the parts snap in, spin it around, then match the case to yours. We’ll tell you if everything fits.',
   totalLabel: 'Running total',
   fpsLabel: 'Est. FPS',
   fpsGame: 'Valorant · 1080p',
   cta: 'Build yours',
   ctaHref: '/new-gaming-pc',
+  /** Snap-in order in the 3D case. Ids map to 3D models: board, cpu, cooler, ram, gpu, psu. */
   parts: [
-    { id: 'cpu', label: 'Ryzen 5 7500F', min: null as Rupees, max: null as Rupees, fps: null as Fps },
     { id: 'board', label: `AM5 board ${PH}`, min: null as Rupees, max: null as Rupees, fps: null as Fps },
+    { id: 'cpu', label: 'Ryzen 5 7500F', min: null as Rupees, max: null as Rupees, fps: null as Fps },
+    { id: 'cooler', label: `CPU cooler ${PH}`, min: null as Rupees, max: null as Rupees, fps: null as Fps },
     { id: 'ram', label: `${PH} GB DDR5`, min: null as Rupees, max: null as Rupees, fps: null as Fps },
     { id: 'gpu', label: 'Radeon RX 9060 XT', min: null as Rupees, max: null as Rupees, fps: null as Fps },
     { id: 'psu', label: `${PH} W PSU`, min: null as Rupees, max: null as Rupees, fps: null as Fps },
   ],
+};
+
+/* ------------------------------------------------------------------ */
+/* 3D: chip viewer (hero) and case fit (build section)                 */
+/* ------------------------------------------------------------------ */
+
+export const chip3d = {
+  open: 'View in 3D',
+  title: 'Ryzen processor in 3D',
+  hint: 'Drag to rotate · scroll or pinch to zoom',
+  hintKeys: 'Arrow keys rotate · + / − zoom',
+  reset: 'Reset view',
+  flip: 'Show contacts',
+  flipBack: 'Show top',
+  autoRotate: 'Auto-rotate',
+  close: 'Close 3D viewer',
+  loading: 'Loading 3D…',
+  noWebgl: 'Your browser can’t show 3D here. Try another browser or device.',
+  /** Text engraved on the heat spreader. */
+  engraving: { brand: 'AMD', line: 'RYZEN', model: `${PH}` },
+  note: 'Illustrative model.',
+};
+
+export type BoardSize = 'atx' | 'matx' | 'itx';
+
+export const caseFit = {
+  viewerLabel: '3D view of your build inside a PC case',
+  hint: 'Drag to rotate',
+  interact: 'Rotate in 3D',
+  interactDone: 'Done',
+  zoomIn: 'Zoom in',
+  zoomOut: 'Zoom out',
+  reset: 'Reset view',
+  glass: 'Glass panel',
+  loading: 'Loading 3D…',
+  caseTitle: 'Your case',
+  modes: { recommended: 'Recommended size', mine: 'My case' },
+  /**
+   * Typical case sizes (mm) — illustrative. Replace with the recommended case spec for this build.
+   * The largest board each size takes is worked out from `clearance` below.
+   */
+  presets: [
+    { id: 'itx', label: 'Mini-ITX', h: 340, w: 185, d: 370 },
+    { id: 'matx', label: 'Micro-ATX', h: 400, w: 205, d: 410 },
+    { id: 'mid', label: 'Mid-tower', h: 470, w: 220, d: 450 },
+    { id: 'full', label: 'Full tower', h: 560, w: 240, d: 540 },
+  ],
+  recommendedId: 'mid',
+  recommendedTag: 'Recommended',
+  dims: {
+    h: { label: 'Height', min: 250, max: 700 },
+    w: { label: 'Width', min: 150, max: 320 },
+    d: { label: 'Depth', min: 250, max: 650 },
+  },
+  unit: 'mm',
+  litres: 'L',
+  boardLabel: 'Motherboard size',
+  boards: [
+    /* Standard form-factor dimensions (mm): height × width as mounted in a tower. */
+    { id: 'atx' as BoardSize, label: 'ATX', h: 305, w: 244 },
+    { id: 'matx' as BoardSize, label: 'Micro-ATX', h: 244, w: 244 },
+    { id: 'itx' as BoardSize, label: 'Mini-ITX', h: 170, w: 170 },
+  ],
+  defaultBoard: 'atx' as BoardSize,
+  /** Typical part sizes for this build (mm). Replace with the exact models’ specs. */
+  partSizes: { gpuLengthMm: 280, coolerHeightMm: 155 },
+  partSizesNote: `Part sizes are typical for this build. Check your exact models. ${PH_SOURCE}`,
+  /**
+   * Clearance rules (mm) used by the fit check. A part fits when its size ≤ case size − clearance.
+   * gpuFront: front fans + radiator space; coolerSide: board tray + standoffs + side panel;
+   * boardVertical: PSU shroud + top edge; boardDepth: front fans + cable space.
+   */
+  clearance: { gpuFront: 60, coolerSide: 50, boardVertical: 125, boardDepth: 150 },
+  checkTitle: 'Fit check',
+  results: {
+    board: { ok: 'Motherboard fits', no: 'Motherboard too big for this case' },
+    gpu: { ok: 'Graphics card fits', no: 'Graphics card too long' },
+    cooler: { ok: 'CPU cooler fits', no: 'CPU cooler too tall' },
+    room: 'room to spare',
+    over: 'over',
+    allGood: 'Everything fits',
+    issues: 'Needs a bigger case, or smaller parts',
+  },
 };
 
 /* ------------------------------------------------------------------ */
