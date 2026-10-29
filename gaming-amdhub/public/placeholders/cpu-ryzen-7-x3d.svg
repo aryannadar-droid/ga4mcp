@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 160" role="img" aria-label="Placeholder image: Ryzen 7 X3D processor">
+  <defs>
+    <linearGradient id="ihs" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#3a3a40"/><stop offset=".5" stop-color="#202024"/><stop offset="1" stop-color="#2c2c31"/></linearGradient>
+    <radialGradient id="glow" cx=".5" cy=".55" r=".5"><stop offset="0" stop-color="#FF6A13" stop-opacity=".35"/><stop offset="1" stop-color="#FF6A13" stop-opacity="0"/></radialGradient>
+  </defs>
+  <rect width="240" height="160" fill="#141416"/>
+  <ellipse cx="120" cy="88" rx="100" ry="70" fill="url(#glow)"/>
+  <rect x="70" y="30" width="100" height="100" rx="6" fill="#16161a" stroke="#2a2a2f"/>
+  <rect x="80" y="40" width="80" height="80" rx="4" fill="url(#ihs)" stroke="#4a4a52"/>
+  <text x="120" y="78" fill="#F5F3EF" font-family="sans-serif" font-size="11" font-weight="700" text-anchor="middle" letter-spacing="1">RYZEN 7</text>
+  <text x="120" y="94" fill="#A3A099" font-family="sans-serif" font-size="8" text-anchor="middle">PLACEHOLDER</text>
+</svg>

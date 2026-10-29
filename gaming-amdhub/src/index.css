@@ -1,0 +1,254 @@
+@import './styles/tokens.css';
+@import 'tailwindcss';
+
+@theme inline {
+  --color-ink: var(--black);
+  --color-surface: var(--black-2);
+  --color-raised: var(--black-3);
+  --color-line: var(--line);
+  --color-accent: var(--brand-accent);
+  --color-accent-deep: var(--orange-deep);
+  --color-gold: var(--gold);
+  --color-gold-soft: var(--gold-soft);
+  --color-fg: var(--text);
+  --color-muted: var(--text-muted);
+
+  --font-display: 'Space Grotesk', ui-sans-serif, system-ui, sans-serif;
+  --font-sans: 'DM Sans', ui-sans-serif, system-ui, sans-serif;
+
+  --ease-out-expo: var(--ease-out);
+}
+
+@layer base {
+  html {
+    background: var(--black);
+    color: var(--text);
+    -webkit-text-size-adjust: 100%;
+    scroll-padding-top: 80px;
+  }
+  html.lenis,
+  html.lenis body {
+    height: auto;
+  }
+  .lenis.lenis-smooth {
+    scroll-behavior: auto !important;
+  }
+  body {
+    @apply font-sans antialiased;
+    background: var(--black);
+    overflow-x: clip;
+    min-height: 100dvh;
+  }
+  h1,
+  h2,
+  h3,
+  h4 {
+    @apply font-display;
+    letter-spacing: -0.02em;
+    text-wrap: balance;
+  }
+  /* Subtle grain over the black background. Static: no animation, no repaint cost on scroll. */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    z-index: 0;
+    pointer-events: none;
+    opacity: 0.06;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 .9 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  }
+  #root {
+    position: relative;
+    z-index: 1;
+  }
+  :focus-visible {
+    outline: 2px solid var(--orange);
+    outline-offset: 3px;
+    border-radius: 6px;
+  }
+  ::selection {
+    background: var(--orange);
+    color: var(--black);
+  }
+}
+
+@layer components {
+  .container-x {
+    @apply mx-auto w-full max-w-[1240px] px-4 sm:px-6 lg:px-8;
+  }
+  .eyebrow {
+    @apply font-display text-xs font-semibold tracking-[0.18em] text-muted uppercase;
+  }
+  .btn {
+    @apply inline-flex min-h-11 items-center justify-center gap-2 rounded-full px-5 text-[15px] font-semibold whitespace-nowrap select-none;
+    transition:
+      transform var(--dur-fast) var(--ease-out),
+      background-color var(--dur-fast) var(--ease-out),
+      opacity var(--dur-fast) var(--ease-out);
+  }
+  .btn:active {
+    transform: scale(0.97);
+  }
+  /* Orange buttons carry black text: 6.8:1 contrast (white on orange fails AA). */
+  .btn-primary {
+    background: var(--orange);
+    color: var(--black);
+  }
+  .btn-primary:hover {
+    background: var(--orange-deep);
+  }
+  .btn-ghost {
+    @apply border border-line text-fg;
+    background: color-mix(in srgb, var(--black-2) 70%, transparent);
+  }
+  .btn-ghost:hover {
+    @apply border-muted;
+  }
+  .link {
+    color: var(--orange);
+    text-underline-offset: 3px;
+  }
+  .link:hover {
+    text-decoration: underline;
+  }
+  .card {
+    @apply rounded-2xl border border-line bg-surface;
+  }
+  .chip {
+    @apply inline-flex min-h-10 items-center rounded-full border border-line px-4 text-sm font-medium text-fg;
+    transition:
+      background-color var(--dur-fast) var(--ease-out),
+      border-color var(--dur-fast) var(--ease-out);
+  }
+  .chip[aria-pressed='true'],
+  .chip[aria-checked='true'] {
+    background: var(--orange);
+    border-color: var(--orange);
+    color: var(--black);
+  }
+  .placeholder-val {
+    font-variant-numeric: tabular-nums;
+  }
+  .text-gold-grad {
+    background: linear-gradient(100deg, var(--gold) 0%, var(--gold-soft) 50%, var(--gold) 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+  /* Orange→gold gradient: only on the hero accent word and the Build-your-PC total. */
+  .text-heat-grad {
+    background: linear-gradient(95deg, var(--orange) 10%, var(--gold-soft) 95%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+  /* Gold badge (X3D, offer). Shimmer sweep plays once when .is-shimmering is added. */
+  .badge-gold {
+    @apply relative inline-flex items-center gap-1.5 overflow-hidden rounded-full border px-2.5 py-1 text-xs font-semibold;
+    border-color: color-mix(in srgb, var(--gold) 55%, transparent);
+    color: var(--gold-soft);
+    background: color-mix(in srgb, var(--gold) 12%, var(--black));
+  }
+  .badge-gold::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(105deg, transparent 30%, color-mix(in srgb, var(--gold-soft) 55%, transparent) 50%, transparent 70%);
+    transform: translateX(-110%);
+    pointer-events: none;
+  }
+  .badge-gold.is-shimmering::after {
+    animation: shimmer 900ms var(--ease-out) 1 forwards;
+  }
+  .hatch {
+    background-image: repeating-linear-gradient(
+      -45deg,
+      color-mix(in srgb, var(--orange) 85%, transparent) 0 8px,
+      color-mix(in srgb, var(--orange) 55%, transparent) 8px 16px
+    );
+  }
+  .no-scrollbar {
+    scrollbar-width: none;
+  }
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+@keyframes shimmer {
+  to {
+    transform: translateX(110%);
+  }
+}
+
+/* Block-level variant for page titles (keeps the element's own display). */
+.fade-reveal {
+  opacity: 0;
+  transform: translateY(16px);
+  animation: word-in 500ms var(--ease-out) forwards;
+}
+
+/* Headline word reveal — pure CSS so it never waits on JS motion libraries (protects LCP). */
+.word-reveal {
+  display: inline-block;
+  opacity: 0;
+  transform: translateY(0.45em);
+  animation: word-in 560ms var(--ease-out) forwards;
+}
+@keyframes word-in {
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* Hero chip */
+@keyframes chip-sway {
+  0%,
+  100% {
+    transform: rotateX(18deg) rotateY(-16deg) rotateZ(-6deg);
+  }
+  50% {
+    transform: rotateX(14deg) rotateY(16deg) rotateZ(-2deg);
+  }
+}
+@keyframes heat-pulse {
+  0%,
+  100% {
+    opacity: 0.55;
+    transform: scale(0.94);
+  }
+  50% {
+    opacity: 0.9;
+    transform: scale(1.04);
+  }
+}
+
+.paused-offscreen,
+.paused-offscreen * {
+  animation-play-state: paused !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 1ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 1ms !important;
+    scroll-behavior: auto !important;
+  }
+  .word-reveal,
+  .fade-reveal {
+    animation: fade-in 200ms linear forwards !important;
+    transform: none;
+  }
+  .badge-gold::after {
+    display: none;
+  }
+}
+@keyframes fade-in {
+  to {
+    opacity: 1;
+  }
+}

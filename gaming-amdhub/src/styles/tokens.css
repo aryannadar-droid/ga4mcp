@@ -1,0 +1,37 @@
+/*
+ * Brand tokens — the ONLY place colours live.
+ * Swap these hex values for the official brand codes when they arrive;
+ * every component reads them through Tailwind theme aliases (see index.css).
+ *
+ * Ratio guide: ~80% black · ~15% orange · ~5% gold.
+ * Orange = "act" (buttons, links, active states, FPS bars).
+ * Gold   = "premium / trusted" (X3D badges, verified ticks, offer chip, price highlights).
+ * Never put orange and gold on the same element.
+ */
+:root {
+  --black: #0a0a0b; /* page background */
+  --black-2: #141416; /* cards, header */
+  --black-3: #1c1c1f; /* raised surfaces, inputs */
+  --line: #2a2a2f; /* hairlines and borders */
+
+  --orange: #ff6a13; /* primary buttons, links, active states, FPS bars */
+  --orange-deep: #e5530a; /* hover and pressed states */
+  --gold: #d4a64a; /* premium accents only */
+  --gold-soft: #f2d58a; /* gold gradient highlight; use for small gold text */
+
+  --text: #f5f3ef;
+  --text-muted: #a3a099;
+
+  /* Official brand accent token: point this at the brand's own variable when supplied. */
+  --brand-accent: var(--orange);
+
+  /* Motion */
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --dur-fast: 200ms;
+  --dur-base: 400ms;
+  --dur-slow: 600ms;
+
+  /* Glows (silicon heat) */
+  --glow-orange: 0 0 0 1px color-mix(in srgb, var(--orange) 60%, transparent),
+    0 10px 40px -8px color-mix(in srgb, var(--orange) 55%, transparent);
+}
