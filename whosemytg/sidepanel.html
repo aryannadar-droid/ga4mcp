@@ -128,25 +128,6 @@
       <button id="loadModels" class="btn" type="button">Load my models</button>
     </div>
     <p id="settingsMsg" class="micro msg" role="status"></p>
-
-    <details class="how">
-      <summary><span class="eyebrow">Under the hood</span><b>How it thinks ▾</b></summary>
-      <ol class="how-steps">
-        <li><b>Reads the site.</b> The page in your tab as you see it, plus a few more pages it picks from your links (About, Products, Pricing, FAQ...). It skips login, cart and legal pages. Each page gets a number.</li>
-        <li><b>Sends one request</b> to the provider you picked: the instructions below, plus the page text and your gossip. Nothing else, and only to that provider.</li>
-        <li><b>The AI drafts 4–6 candidate TGs</b>, defined by situation (what's true for them right now), not age or income.</li>
-        <li><b>Merges lookalikes.</b> If two would get the same ad, page or offer, they're one TG.</li>
-        <li><b>Runs the overlap test.</b> No real person should fit two TGs, so each one gets a yes/no "bouncer question".</li>
-        <li><b>Rates buy-intent</b> from 0 to 5 stars. Only one TG can be top.</li>
-        <li><b>Writes the cards</b>: 5 reasons to buy, each tagged and citing page numbers, plus a lead line, offer, ad angle and landing-page hero.</li>
-        <li><b>Follows house rules</b>: no competitor names, no invented stats, prices or reviews, and risky claims go to "Run past the client".</li>
-      </ol>
-      <details class="prompt">
-        <summary>Show the exact instructions</summary>
-        <pre id="promptText"></pre>
-      </details>
-      <p class="micro">Want it to behave differently? Edit <code>prompt.js</code> in the extension folder and reload it.</p>
-    </details>
   </aside>
 
   <script src="prompt.js"></script>

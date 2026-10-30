@@ -950,7 +950,6 @@ function setTgCount(n) {
 
 async function init() {
   $("tagline").textContent = pick(TAGLINES);
-  $("promptText").textContent = SYSTEM_PROMPT;
   const s = await getSettings();
   setTgCount(Number(s.tgCount) || 3);
   renderPill();

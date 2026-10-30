@@ -1,4 +1,4 @@
-WHOSEMYTG v0.4.0 - how to load it in Chrome
+WHOSEMYTG v0.4.1 - how to load it in Chrome
 
 1. Unzip this folder somewhere permanent (Chrome reads from it every time, so don't delete it).
 2. In Chrome, open chrome://extensions
@@ -46,5 +46,3 @@ Good to know:
 - Star ratings are the AI's judgement of buy-intent from the site, not measured data.
 - Groq's free tier reads less of each site (per-minute token cap). Use Gemini or a paid key for big sites.
 - Sites that load their content with JavaScript can come back thin. The extension reads the page you have open as rendered, plus a few other pages fetched directly.
-- Settings > "How it thinks" explains the steps in plain English and shows the exact instructions sent to the AI.
-- To change how TGs are locked or rated, edit prompt.js. To add a provider, add an entry to PROVIDERS in providers.js.
