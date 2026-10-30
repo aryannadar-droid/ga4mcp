@@ -323,7 +323,8 @@ async function readSite(tab, onNote, budget) {
     func: extractFromLivePage,
   });
   const pages = [];
-  const current = { ...live, text: live.text.slice(0, budget.home) };
+  const failed = [];
+  const current = { ...live, text: live.text.slice(0, budget.home), via: "tab", total: live.text.length };
   delete current.links;
   pages.push(current);
 
@@ -334,12 +335,16 @@ async function readSite(tab, onNote, budget) {
 
   onNote(`Snooping through ${candidates.length} more pages`);
   const results = await Promise.allSettled(candidates.map(fetchPage));
-  results.forEach((r) => {
-    if (r.status === "fulfilled" && r.value.text.length > 200) {
-      pages.push({ ...r.value, text: r.value.text.slice(0, budget.page) });
+  results.forEach((r, i) => {
+    if (r.status === "rejected") {
+      failed.push({ url: candidates[i], reason: r.reason && r.reason.name === "AbortError" ? "timed out" : (r.reason && r.reason.message) || "failed" });
+    } else if (r.value.text.length <= 200) {
+      failed.push({ url: candidates[i], reason: "almost no readable text" });
+    } else {
+      pages.push({ ...r.value, text: r.value.text.slice(0, budget.page), via: "fetched", total: r.value.text.length });
     }
   });
-  return { origin, pages };
+  return { origin, pages, failed };
 }
 
 // ---------- progress + toasts ----------
@@ -520,7 +525,7 @@ function whoPanel(t) {
   return p;
 }
 
-function whyPanel(t) {
+function whyPanel(t, meta) {
   const ol = el("ol", "reasons");
   t.reasons_to_buy.forEach((x, j) => {
     const li = el("li");
@@ -528,6 +533,22 @@ function whyPanel(t) {
     const role = el("div", "role");
     append(role, el("span", null, reasonRole(j)), tagChip(x.tag));
     append(d, role, el("span", null, x.reason));
+    x.pages.forEach((n) => {
+      const real = n <= ((meta && meta.pages) || []).length;
+      const c = el("button", "cite" + (real ? "" : " bad"), "p" + n);
+      c.type = "button";
+      c.title = real ? "Jump to source page " + n : "The AI cited a page that doesn't exist. Treat this claim as unverified.";
+      c.addEventListener("click", () => {
+        const row = $("src-" + n);
+        if (!row) return;
+        $("sources").open = true;
+        row.scrollIntoView({ behavior: "smooth", block: "center" });
+        row.classList.remove("ping");
+        void row.offsetWidth;
+        row.classList.add("ping");
+      });
+      d.appendChild(c);
+    });
     li.appendChild(d);
     ol.appendChild(li);
   });
@@ -625,7 +646,7 @@ function renderTg(t, i, meta) {
 
   const tabs = [
     ["Who", () => whoPanel(t)],
-    ["Why buy", () => whyPanel(t)],
+    ["Why buy", () => whyPanel(t, meta)],
     ["Pitch", () => pitchPanel(t, meta)],
     ["Fine print", () => finePanel(t)],
   ];
@@ -688,6 +709,69 @@ function renderReceipts(r) {
   return card;
 }
 
+function renderSources(r, meta) {
+  const src = buildSources(r, meta);
+  const card = el("section", "win");
+  card.appendChild(winBar("sources.bib"));
+  const d = el("details", "win-body sources");
+  d.id = "sources";
+  d.open = true;
+  const sum = el("summary");
+  const done = el("span", "src-count");
+  append(sum, el("span", "eyebrow", "Citation checklist"), el("b", null, `${src.rows.length} pages read · ${src.cited}/${src.claims} reasons cited`), done);
+  d.appendChild(sum);
+  d.appendChild(el("p", "micro", "Tick a page once you've checked the claims citing it against the live site. Unticked means unverified."));
+  if (src.siteUncited) {
+    d.appendChild(el("div", "note", `${src.siteUncited} reason${src.siteUncited > 1 ? "s are" : " is"} tagged "Straight from the site" but cite no page. Check those by hand.`));
+  }
+  const ul = el("ul", "src-list");
+  const tick = () => {
+    const n = ul.querySelectorAll("input:checked").length;
+    done.textContent = n ? `${n}/${src.rows.length} verified` : "";
+    done.classList.toggle("all", n === src.rows.length);
+  };
+  src.rows.forEach((row) => {
+    const li = el("li");
+    li.id = "src-" + row.n;
+    const box = el("input");
+    box.type = "checkbox";
+    box.setAttribute("aria-label", "Verified page " + row.n);
+    box.addEventListener("change", () => {
+      li.classList.toggle("checked", box.checked);
+      tick();
+    });
+    const body = el("div");
+    const top = el("div", "src-top");
+    const a = el("a", null, row.title || row.url);
+    a.href = row.url;
+    a.target = "_blank";
+    a.rel = "noopener";
+    append(top, el("span", "src-n", "p" + row.n), a);
+    append(body, top, el("small", "src-url", row.url), sourceDetail(row) ? el("small", null, sourceDetail(row)) : null);
+    if (row.citedBy.length) {
+      const cites = el("div", "src-cites");
+      row.citedBy.forEach((c) => cites.appendChild(el("span", null, c)));
+      body.appendChild(cites);
+    } else {
+      body.appendChild(el("small", "src-none", "Read, but not cited by any claim"));
+    }
+    append(li, box, body);
+    ul.appendChild(li);
+  });
+  d.appendChild(ul);
+  if (src.failed.length) {
+    d.appendChild(el("b", "eyebrow", "Tried, but couldn't read"));
+    const f = el("ul", "src-failed");
+    src.failed.forEach((x) => f.appendChild(el("li", null, `${x.url} (${x.reason})`)));
+    d.appendChild(f);
+  }
+  if (src.unknown.length) d.appendChild(el("p", "micro", `The AI also cited page ${src.unknown.join(", ")}, which doesn't exist. Ignore those.`));
+  if (src.trimmed) d.appendChild(el("p", "micro", "Page text was cut in half to fit this provider's limit."));
+  if (meta.model) d.appendChild(el("p", "micro", `Model: ${meta.model} · ${meta.date}`));
+  card.appendChild(d);
+  return card;
+}
+
 function renderReport(report, meta) {
   const r = normalise(report);
   const out = $("output");
@@ -699,6 +783,8 @@ function renderReport(report, meta) {
   out.appendChild(sectionTitle("Meet your TGs", `${r.tgs.length} personas, zero overlap`));
   r.tgs.forEach((t, i) => out.appendChild(renderTg(t, i, meta)));
   out.appendChild(renderReceipts(r));
+  out.appendChild(sectionTitle("Sources", "what the AI actually read"));
+  out.appendChild(renderSources(r, meta));
   $("dock").hidden = false;
   $("footnote").textContent = pick(FOOTNOTES);
   return r;
@@ -776,11 +862,13 @@ async function analyze() {
       onAttempt: (m) => ($("thinkNote").textContent = `${p.label} · ${m}`),
     };
     let reply;
+    let trimmed = false;
     try {
       reply = await callProvider({ ...base, user: makeUser(1) });
     } catch (e) {
       if (!(e instanceof ApiError && e.kind === "toolarge")) throw e;
       $("thinkNote").textContent = "Too much text for this key. Trimming and retrying";
+      trimmed = true;
       reply = await callProvider({ ...base, user: makeUser(0.5) }); // one retry with half the page text
     }
 
@@ -798,7 +886,16 @@ async function analyze() {
     lastMeta = {
       origin: site.origin,
       date: new Date().toISOString().slice(0, 10),
-      pages: site.pages.map((pg) => pg.url),
+      pages: site.pages.map((pg) => ({
+        url: pg.url,
+        title: pg.title,
+        via: pg.via,
+        chars: trimmed ? Math.floor(pg.text.length * 0.5) : pg.text.length,
+        total: pg.total,
+      })),
+      failed: site.failed,
+      trimmed,
+      model: `${p.label} · ${reply.model}`,
     };
     const secs = Math.round((Date.now() - progress.t0) / 1000);
     stopProgress();
@@ -853,6 +950,7 @@ function setTgCount(n) {
 
 async function init() {
   $("tagline").textContent = pick(TAGLINES);
+  $("promptText").textContent = SYSTEM_PROMPT;
   const s = await getSettings();
   setTgCount(Number(s.tgCount) || 3);
   renderPill();

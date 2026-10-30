@@ -1,4 +1,4 @@
-WHOSEMYTG v0.3.0 - how to load it in Chrome
+WHOSEMYTG v0.4.0 - how to load it in Chrome
 
 1. Unzip this folder somewhere permanent (Chrome reads from it every time, so don't delete it).
 2. In Chrome, open chrome://extensions
@@ -32,6 +32,10 @@ Using it:
       The top one is flagged "Hottest TG": the persona the brand sells to even if the others don't bite.
     - A card per TG with tabs: Who / Why buy / Pitch (lead line + a mock landing-page hero) / Fine print.
     - The receipts: candidates considered, merges and the overlap check.
+    - Sources & citation checklist: every page the AI read (open tab or fetched, characters used),
+      which claims cite it, and pages it tried but couldn't read. Reasons show p1/p2 chips that
+      jump to their source; a struck-through red chip means the AI cited a page that doesn't exist.
+      Tick each page once you've checked it against the live site.
 11. Copy as text, or download the HTML report (open it and print to PDF if needed).
 
 Good to know:
@@ -42,4 +46,5 @@ Good to know:
 - Star ratings are the AI's judgement of buy-intent from the site, not measured data.
 - Groq's free tier reads less of each site (per-minute token cap). Use Gemini or a paid key for big sites.
 - Sites that load their content with JavaScript can come back thin. The extension reads the page you have open as rendered, plus a few other pages fetched directly.
+- Settings > "How it thinks" explains the steps in plain English and shows the exact instructions sent to the AI.
 - To change how TGs are locked or rated, edit prompt.js. To add a provider, add an entry to PROVIDERS in providers.js.

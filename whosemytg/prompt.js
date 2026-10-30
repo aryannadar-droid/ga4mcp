@@ -35,7 +35,7 @@ For each TG write:
 - first_question: the first question or objection in this buyer's head.
 - problem: the problem statement in the buyer's words.
 - solution: how this brand solves it, using only what the site supports.
-- reasons_to_buy: exactly 5 items. Item 1 is the lead ad / hero message, items 2-4 feed other creatives, item 5 is a reserve. Each item = {"reason": "...", "tag": "site" or "hypothesis"}.
+- reasons_to_buy: exactly 5 items. Item 1 is the lead ad / hero message, items 2-4 feed other creatives, item 5 is a reserve. Each item = {"reason": "...", "tag": "site" or "hypothesis", "pages": [page numbers]}.
 - lead_copy: {"line": "one lead copy line", "tone": "the tone for this TG"}. Each TG gets a clearly different tone.
 - offer: the offer, pack, bundle or entry point to push for this TG.
 - ad_angle: one ad-set angle.
@@ -49,6 +49,7 @@ HARD RULES
 - Never name competitor brands anywhere. Say "other brands in the market".
 - Never invent quotes, statistics, ratings, review counts, prices, certifications or awards. If it is not in the provided content, it is a hypothesis.
 - Tag every reason: "site" only when the provided pages directly support it, otherwise "hypothesis".
+- CITE: the website content is split into numbered pages ("Page 1", "Page 2"...). Every "site" reason lists the page numbers that support it in "pages". Hypotheses use an empty list. Never cite a page that does not contain the supporting text. brand_summary.source_pages lists the pages the brand read is based on.
 - Health, safety, legal, certification, "best/only/#1" and comparative claims go into flags_for_signoff. Do not state them as fact.
 - Plain, specific language. No filler, no buzzwords, no emojis.
 - Keep it compact: every text field is one or two sentences, each reason to buy is under 25 words, and audit entries are one line each.
@@ -63,7 +64,8 @@ Return a single JSON object and nothing else (no markdown fences):
     "what_they_sell": "",
     "positioning": "",
     "who_pays_vs_uses": "",
-    "content_quality_note": ""
+    "content_quality_note": "",
+    "source_pages": [1]
   },
   "audit": {
     "candidates_considered": ["name - one-line situation"],
@@ -74,7 +76,7 @@ Return a single JSON object and nothing else (no markdown fences):
     {
       "name": "", "tldr": "", "situation": "", "split_question": "", "first_question": "",
       "problem": "", "solution": "",
-      "reasons_to_buy": [{"reason": "", "tag": "site"}],
+      "reasons_to_buy": [{"reason": "", "tag": "site", "pages": [1, 2]}],
       "lead_copy": {"line": "", "tone": ""},
       "offer": "", "ad_angle": "",
       "landing_page_hero": {"headline": "", "subhead": "", "cta": ""},

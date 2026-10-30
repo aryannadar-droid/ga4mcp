@@ -137,8 +137,8 @@ function normalise(report) {
       solution: str(t.solution),
       reasons_to_buy: arr(t.reasons_to_buy).map((x) =>
         typeof x === "object" && x
-          ? { reason: str(x.reason), tag: str(x.tag) || "hypothesis" }
-          : { reason: str(x), tag: "hypothesis" }
+          ? { reason: str(x.reason), tag: str(x.tag) || "hypothesis", pages: pageNums(x.pages) }
+          : { reason: str(x), tag: "hypothesis", pages: [] }
       ),
       lead_copy: { line: str(lc.line || lc), tone: str(lc.tone) },
       offer: str(t.offer),
@@ -165,6 +165,7 @@ function normalise(report) {
       positioning: str(bs.positioning),
       who_pays_vs_uses: str(bs.who_pays_vs_uses),
       content_quality_note: str(bs.content_quality_note),
+      source_pages: pageNums(bs.source_pages),
     },
     audit: {
       candidates_considered: arr(audit.candidates_considered).map(str),
@@ -180,6 +181,60 @@ function normalise(report) {
   };
 }
 
+// [1, "2", "Page 3"] -> [1, 2, 3]
+function pageNums(v) {
+  return [...new Set(arr(v).map((x) => parseInt(String(x).replace(/\D+/g, ""), 10)).filter((n) => n > 0))].sort(
+    (a, b) => a - b
+  );
+}
+
+// meta.pages may be URL strings (older runs) or {url, title, via, chars, total} objects.
+function pageInfo(p) {
+  return typeof p === "string" ? { url: p, title: "", via: "", chars: 0, total: 0 } : p;
+}
+
+const VIA_LABELS = { tab: "Read from your open tab", fetched: "Fetched directly" };
+
+// One row per page the AI was given, with every claim that cites it.
+function buildSources(r, meta) {
+  const pages = ((meta && meta.pages) || []).map(pageInfo);
+  const rows = pages.map((p, i) => ({ n: i + 1, ...p, citedBy: [] }));
+  const unknown = new Set();
+  const cite = (n, label) => {
+    if (rows[n - 1]) rows[n - 1].citedBy.push(label);
+    else unknown.add(n);
+  };
+  r.brand_summary.source_pages.forEach((n) => cite(n, "Brand read"));
+  let claims = 0;
+  let cited = 0;
+  r.tgs.forEach((t) =>
+    t.reasons_to_buy.forEach((x, j) => {
+      claims++;
+      if (x.pages.length) cited++;
+      x.pages.forEach((n) => cite(n, `${t.name} · reason ${j + 1}`));
+    })
+  );
+  const siteUncited = r.tgs.reduce(
+    (a, t) => a + t.reasons_to_buy.filter((x) => x.tag.toLowerCase() === "site" && !x.pages.length).length,
+    0
+  );
+  return {
+    rows,
+    failed: (meta && meta.failed) || [],
+    claims,
+    cited,
+    siteUncited,
+    unknown: [...unknown],
+    trimmed: !!(meta && meta.trimmed),
+  };
+}
+
+function sourceDetail(row) {
+  const bits = [VIA_LABELS[row.via] || ""];
+  if (row.chars) bits.push(row.total > row.chars ? `${row.chars.toLocaleString()} of ${row.total.toLocaleString()} characters` : `${row.chars.toLocaleString()} characters`);
+  return bits.filter(Boolean).join(" · ");
+}
+
 function starText(stars) {
   if (stars == null) return "unrated";
   return "★".repeat(Math.floor(stars)) + (stars % 1 ? "½" : "") + ` (${stars}/5)`;
@@ -190,7 +245,9 @@ function toMarkdown(report, meta) {
   const L = [];
   const brand = r.brand_summary.brand || (meta && meta.origin) || "Brand";
   L.push(`# Who's buying ${brand}?`);
-  if (meta) L.push(`Source: ${meta.origin} | Generated ${meta.date} | Pages read: ${meta.pages.length}`);
+  if (meta) {
+    L.push(`Source: ${meta.origin} | Generated ${meta.date} | Pages read: ${meta.pages.length}${meta.model ? " | Model: " + meta.model : ""}`);
+  }
   L.push("");
   L.push("## The brand, decoded");
   L.push(`- Sells: ${r.brand_summary.what_they_sell}`);
@@ -212,7 +269,11 @@ function toMarkdown(report, meta) {
     L.push(`**Solution:** ${t.solution}`);
     L.push("**Reasons to buy:**");
     t.reasons_to_buy.forEach((x, j) =>
-      L.push(`${j + 1}. (${reasonRole(j)}: ${ROLE_HINTS[j] || "creative"}) ${x.reason} [${tagLabel(x.tag)}]`)
+      L.push(
+        `${j + 1}. (${reasonRole(j)}: ${ROLE_HINTS[j] || "creative"}) ${x.reason} [${tagLabel(x.tag)}]${
+          x.pages.length ? " " + x.pages.map((n) => `[p${n}]`).join("") : ""
+        }`
+      )
     );
     L.push(`**Lead copy (${t.lead_copy.tone}):** ${t.lead_copy.line}`);
     L.push(`**Offer / pack:** ${t.offer}`);
@@ -234,9 +295,20 @@ function toMarkdown(report, meta) {
     r.flags_for_signoff.forEach((f) => L.push(`- ${f}`));
   }
   if (meta && meta.pages.length) {
+    const src = buildSources(r, meta);
     L.push("");
-    L.push("## Pages read");
-    meta.pages.forEach((p) => L.push(`- ${p}`));
+    L.push("## Sources & citation checklist");
+    L.push(`${src.cited} of ${src.claims} reasons cite a page. Tick each page once you've checked its claims against the live site.`);
+    src.rows.forEach((row) => {
+      L.push(`- [ ] [p${row.n}] ${row.title || row.url} - ${row.url}${sourceDetail(row) ? " (" + sourceDetail(row) + ")" : ""}`);
+      L.push(`  - ${row.citedBy.length ? "Cited by: " + row.citedBy.join("; ") : "Read, but not cited"}`);
+    });
+    if (src.failed.length) {
+      L.push("");
+      L.push("Tried but couldn't read:");
+      src.failed.forEach((f) => L.push(`- ${f.url} (${f.reason})`));
+    }
+    if (src.trimmed) L.push("Note: page text was cut in half to fit the provider's limit.");
   }
   return L.join("\n");
 }
@@ -289,7 +361,12 @@ function toHtml(report, meta) {
   ${row("Solution:", t.solution)}
   <p><b>Reasons to buy</b></p>
   <ol>${t.reasons_to_buy
-    .map((x, j) => `<li><i>${esc(reasonRole(j))}.</i> ${esc(x.reason)} <span class="tag">${esc(tagLabel(x.tag))}</span></li>`)
+    .map(
+      (x, j) =>
+        `<li><i>${esc(reasonRole(j))}.</i> ${esc(x.reason)} <span class="tag">${esc(tagLabel(x.tag))}</span>${x.pages
+          .map((n) => ` <a class="cite" href="#src-${n}">p${n}</a>`)
+          .join("")}</li>`
+    )
     .join("")}</ol>
   ${t.lead_copy.line ? `<blockquote>${esc(t.lead_copy.line)}${t.lead_copy.tone ? `<small>Tone: ${esc(t.lead_copy.tone)}</small>` : ""}</blockquote>` : ""}
   ${row("Offer / pack:", t.offer)}
@@ -326,10 +403,13 @@ ol.lineup .nm{flex:1;font-weight:600}.score{font-variant-numeric:tabular-nums;co
 .stars{display:inline-flex;gap:2px;vertical-align:middle}.stars.unrated{font-size:12px;color:#65675e}
 .star{width:15px;height:15px;display:inline-block;clip-path:polygon(50% 0%,61% 35%,98% 35%,68% 57%,79% 91%,50% 70%,21% 91%,32% 57%,2% 35%,39% 35%);background:#d9dad2}
 .star.full{background:#F7A501}.star.half{background:linear-gradient(90deg,#F7A501 50%,#d9dad2 50%)}
+.cite{font-size:11px;font-weight:700;color:#1D4AFF;text-decoration:none;border:1px solid #c5cff9;border-radius:4px;padding:0 4px}
+.src{list-style:none;margin:8px 0 0;padding:0}.src li{display:grid;grid-template-columns:22px 1fr;gap:8px;padding:8px 0;border-bottom:1px dashed #cfd0c8}
+.src input{margin-top:4px;width:16px;height:16px}.src a{word-break:break-all}.src small{display:block;color:#65675e}
 @media print{body{background:#fff}.card{box-shadow:none}}
 </style></head><body>
 <h1>Who's buying ${esc(brand)}?</h1>
-<p class="meta">${meta ? esc(meta.origin) + " · " + esc(meta.date) + " · " + meta.pages.length + " pages read" : ""} · Made with WhoseMyTG</p>
+<p class="meta">${meta ? esc(meta.origin) + " · " + esc(meta.date) + " · " + meta.pages.length + " pages read" + (meta.model ? " · " + esc(meta.model) : "") : ""} · Made with WhoseMyTG</p>
 <section class="card"><div class="eyebrow">The brand, decoded</div>
 ${row("Sells:", r.brand_summary.what_they_sell)}
 ${row("Positioning:", r.brand_summary.positioning)}
@@ -344,12 +424,34 @@ ${r.audit.merges.map((m) => `<li>Merged ${esc(m.merged)} into ${esc(m.into)}: ${
 <li>Overlap check: ${esc(r.audit.overlap_check)}</li></ul>
 ${r.flags_for_signoff.length ? `<p class="flag"><b>Run past the client first:</b></p><ul>${r.flags_for_signoff.map((f) => `<li>${esc(f)}</li>`).join("")}</ul>` : ""}
 </section>
+${sourcesHtml(r, meta)}
 <p class="meta">"Educated guess" means exactly that. Validate with GA4, CRM or interview data before you lock anything.</p>
 </body></html>`;
 }
 
+function sourcesHtml(r, meta) {
+  if (!meta || !meta.pages || !meta.pages.length) return "";
+  const src = buildSources(r, meta);
+  const rows = src.rows
+    .map(
+      (row) => `<li id="src-${row.n}"><input type="checkbox" aria-label="Checked page ${row.n}"><div><b>p${row.n} · ${esc(
+        row.title || row.url
+      )}</b> <a href="${esc(row.url)}">${esc(row.url)}</a><small>${esc(sourceDetail(row))}</small><small>${
+        row.citedBy.length ? "Cited by: " + esc(row.citedBy.join("; ")) : "Read, but not cited"
+      }</small></div></li>`
+    )
+    .join("");
+  return `<section class="card"><div class="eyebrow">Sources &amp; citation checklist</div>
+<p>${src.cited} of ${src.claims} reasons cite a page${src.siteUncited ? `; ${src.siteUncited} tagged "site" have no page cited` : ""}. Tick each page once you've checked its claims against the live site.</p>
+<ul class="src">${rows}</ul>
+${src.failed.length ? `<p><b>Tried but couldn't read:</b></p><ul>${src.failed.map((f) => `<li>${esc(f.url)} (${esc(f.reason)})</li>`).join("")}</ul>` : ""}
+${src.trimmed ? "<p class=\"meta\">Page text was cut in half to fit the provider's limit.</p>" : ""}
+</section>`;
+}
+
 if (typeof module !== "undefined") {
   module.exports = {
+    buildSources,
     pickPages,
     parseModelJson,
     normalise,
