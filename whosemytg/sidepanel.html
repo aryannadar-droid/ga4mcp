@@ -1,0 +1,138 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>WhoseMyTG</title>
+  <link rel="stylesheet" href="sidepanel.css">
+</head>
+<body>
+  <svg width="0" height="0" style="position:absolute" aria-hidden="true">
+    <symbol id="i-gear" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z"/><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1Z"/></symbol>
+    <symbol id="i-x" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" d="M6 6l12 12M18 6 6 18"/></symbol>
+    <symbol id="i-eye" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2" d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12Z"/><circle cx="12" cy="12" r="3" fill="none" stroke="currentColor" stroke-width="2"/></symbol>
+    <symbol id="i-copy" viewBox="0 0 24 24"><rect x="9" y="9" width="12" height="12" rx="2" fill="none" stroke="currentColor" stroke-width="2"/><path fill="none" stroke="currentColor" stroke-width="2" d="M5 15H4a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v1"/></symbol>
+    <symbol id="i-down" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" d="M12 4v12m0 0-5-5m5 5 5-5M5 20h14"/></symbol>
+    <symbol id="i-redo" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" d="M20 11a8 8 0 1 0-2.3 5.7M20 4v7h-7"/></symbol>
+  </svg>
+
+  <div class="app">
+    <header class="top">
+      <div class="brandmark">
+        <img src="icons/icon48.png" alt="" width="34" height="34">
+        <div>
+          <h1>WhoseMyTG</h1>
+          <p class="tagline" id="tagline">Who's actually going to buy this?</p>
+        </div>
+      </div>
+      <button id="openSettings" class="icon-btn" type="button" aria-label="Settings" title="Settings">
+        <svg width="18" height="18"><use href="#i-gear"/></svg>
+      </button>
+    </header>
+
+    <section class="win" id="setup">
+      <div class="win-bar"><span class="dots"><i></i><i></i><i></i></span><span>new_investigation.exe</span></div>
+      <div class="win-body">
+        <div class="target">
+          <img id="favicon" alt="" width="28" height="28">
+          <div class="target-text">
+            <span class="eyebrow">Today's suspect</span>
+            <strong id="siteName">Open a brand's website</strong>
+          </div>
+          <button id="providerPill" class="pill" type="button" title="Change AI provider">No brain yet</button>
+        </div>
+
+        <div class="block">
+          <span class="label">How many TGs?</span>
+          <div class="seg" id="tgCount" role="radiogroup" aria-label="Number of TGs">
+            <button type="button" role="radio" data-n="2">2</button>
+            <button type="button" role="radio" data-n="3">3</button>
+            <button type="button" role="radio" data-n="4">4</button>
+            <button type="button" role="radio" data-n="5">5</button>
+          </div>
+          <p class="micro" id="tgHint"></p>
+        </div>
+
+        <details class="extra">
+          <summary>Got insider gossip? <span class="muted">(optional)</span></summary>
+          <textarea id="extra" rows="3" placeholder="What's the pitch about? Who does the client swear buys? Public info only."></textarea>
+          <p class="micro warn">Keep confidential stuff (GA4 exports, briefs) out of here. Some free AI tiers may use what you send to train their models.</p>
+        </details>
+
+        <button id="analyze" class="cta" type="button"><span id="ctaText">Find my TGs</span> <span class="arrow">→</span></button>
+      </div>
+    </section>
+
+    <section id="progress" class="win progress" hidden aria-live="polite">
+      <div class="win-bar"><span class="dots"><i></i><i></i><i></i></span><span>investigating.exe</span><span class="timer" id="timer">0s</span></div>
+      <div class="win-body">
+        <ol class="steps">
+          <li data-step="read"><span class="bullet"></span><div><b>Casing the website</b><small id="readNote">Reading the page you have open</small></div></li>
+          <li data-step="think"><span class="bullet"></span><div><b>Thinking very hard</b><small id="thinkNote">Drafting, merging, overlap-checking</small></div></li>
+          <li data-step="lock"><span class="bullet"></span><div><b>Locking the TGs</b><small>Stars, cards and receipts</small></div></li>
+        </ol>
+        <p class="quip" id="quip"></p>
+        <div class="bar"><span id="barFill"></span></div>
+      </div>
+    </section>
+
+    <div id="toast" class="toast" role="status" hidden></div>
+
+    <section id="output"></section>
+
+    <p class="footnote" id="footnote"></p>
+  </div>
+
+  <div id="dock" class="dock" hidden>
+    <button id="copyText" class="btn" type="button"><svg width="16" height="16"><use href="#i-copy"/></svg>Copy</button>
+    <button id="downloadHtml" class="btn" type="button"><svg width="16" height="16"><use href="#i-down"/></svg>Report</button>
+    <button id="again" class="btn" type="button"><svg width="16" height="16"><use href="#i-redo"/></svg>Again</button>
+  </div>
+
+  <div id="scrim" class="scrim" hidden></div>
+  <aside id="drawer" class="drawer" hidden aria-label="Settings">
+    <div class="drawer-head">
+      <div>
+        <span class="eyebrow">Settings</span>
+        <h2>Bring your own brain</h2>
+      </div>
+      <button id="closeSettings" class="icon-btn" type="button" aria-label="Close settings"><svg width="16" height="16"><use href="#i-x"/></svg></button>
+    </div>
+    <p class="micro">Pick any AI provider and paste your own key. Keys stay in this browser. We never see them (there is no "we", it's just you and this extension).</p>
+
+    <div class="providers" id="providers" role="radiogroup" aria-label="AI provider"></div>
+
+    <div class="block" id="customBox" hidden>
+      <label class="label" for="customBase">Base URL</label>
+      <input id="customBase" placeholder="https://api.together.xyz/v1">
+      <p class="micro">Anything that speaks the OpenAI <code>/chat/completions</code> format. Chrome will ask once for permission to call it.</p>
+    </div>
+
+    <div class="block">
+      <label class="label" for="apiKey"><span id="keyLabel">API key</span> <a id="keyLink" href="#" target="_blank" rel="noopener">Get a key ↗</a></label>
+      <div class="keyrow">
+        <input id="apiKey" type="password" autocomplete="off" spellcheck="false" placeholder="Paste your key">
+        <button id="toggleKey" class="icon-btn small" type="button" aria-label="Show or hide key" title="Show / hide"><svg width="16" height="16"><use href="#i-eye"/></svg></button>
+      </div>
+    </div>
+
+    <div class="block">
+      <label class="label" for="model">Model</label>
+      <input id="model" list="modelList" spellcheck="false">
+      <datalist id="modelList"></datalist>
+      <p class="micro">Leave it on the default unless it stops working. Then hit "Load my models" and pick another.</p>
+    </div>
+
+    <div class="row">
+      <button id="saveSettings" class="cta small" type="button">Save</button>
+      <button id="loadModels" class="btn" type="button">Load my models</button>
+    </div>
+    <p id="settingsMsg" class="micro msg" role="status"></p>
+  </aside>
+
+  <script src="prompt.js"></script>
+  <script src="lib.js"></script>
+  <script src="providers.js"></script>
+  <script src="sidepanel.js"></script>
+</body>
+</html>
