@@ -1,4 +1,4 @@
-WHOSEMYTG v0.6.0 - how to load it in Chrome
+WHOSEMYTG v0.6.1 - how to load it in Chrome
 
 1. Unzip this folder somewhere permanent (Chrome reads from it every time, so don't delete it).
 2. In Chrome, open chrome://extensions

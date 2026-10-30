@@ -1105,8 +1105,20 @@ function renderSources(r, meta) {
     append(top, el("span", "src-n", "p" + row.n), a);
     append(body, top, el("small", "src-url", row.url), sourceDetail(row) ? el("small", null, sourceDetail(row)) : null);
     if (row.citedBy.length) {
+      // "TG · reason 3" labels grouped into one line per TG: "TG: reasons 1, 2, 3"
+      const groups = new Map();
+      row.citedBy.forEach((c) => {
+        const k = c.lastIndexOf(" · reason ");
+        const name = k < 0 ? c : c.slice(0, k);
+        if (!groups.has(name)) groups.set(name, []);
+        if (k >= 0) groups.get(name).push(c.slice(k + 10));
+      });
       const cites = el("div", "src-cites");
-      row.citedBy.forEach((c) => cites.appendChild(el("span", null, c)));
+      groups.forEach((nums, name) => {
+        const line = el("div");
+        append(line, el("b", null, name), nums.length ? el("span", null, ` · reason${nums.length > 1 ? "s" : ""} ${nums.join(", ")}`) : null);
+        cites.appendChild(line);
+      });
       body.appendChild(cites);
     } else {
       body.appendChild(el("small", "src-none", "Read, but not cited by any claim"));
