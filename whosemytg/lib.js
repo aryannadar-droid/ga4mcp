@@ -153,6 +153,8 @@ function normalise(report) {
       stars_why: str(bscore.why),
       evidence: str(t.evidence) || "hypothesis",
       flags_for_signoff: arr(t.flags_for_signoff).map(str),
+      locked: !!t._locked,
+      edited: !!t._edited,
       hot: false,
     };
   });
@@ -240,13 +242,26 @@ function starText(stars) {
   return "★".repeat(Math.floor(stars)) + (stars % 1 ? "½" : "") + ` (${stars}/5)`;
 }
 
-function toMarkdown(report, meta) {
+const LENS_EXPORT_ORDER = ["media", "seo", "cro", "design", "annotate"];
+
+// lenses: {id: {data}} from the department kits; optional.
+function lensSections(lenses, fn) {
+  if (!lenses || typeof fn !== "function") return [];
+  return LENS_EXPORT_ORDER.filter((id) => lenses[id] && lenses[id].data).map((id) => fn(id, lenses[id].data));
+}
+
+function marketLine(meta) {
+  return meta && (meta.market || meta.language) ? `Market: ${meta.market || "Global"} | Copy language: ${meta.language || "English"}` : "";
+}
+
+function toMarkdown(report, meta, lenses) {
   const r = normalise(report);
   const L = [];
   const brand = r.brand_summary.brand || (meta && meta.origin) || "Brand";
   L.push(`# Who's buying ${brand}?`);
   if (meta) {
     L.push(`Source: ${meta.origin} | Generated ${meta.date} | Pages read: ${meta.pages.length}${meta.model ? " | Model: " + meta.model : ""}`);
+    if (marketLine(meta)) L.push(marketLine(meta));
   }
   L.push("");
   L.push("## The brand, decoded");
@@ -294,6 +309,10 @@ function toMarkdown(report, meta) {
     L.push("## Run past the client first");
     r.flags_for_signoff.forEach((f) => L.push(`- ${f}`));
   }
+  lensSections(lenses, typeof lensToMarkdown === "function" ? lensToMarkdown : null).forEach((m) => {
+    L.push("");
+    L.push(m);
+  });
   if (meta && meta.pages.length) {
     const src = buildSources(r, meta);
     L.push("");
@@ -334,7 +353,7 @@ function starsHtml(stars) {
 
 const TG_COLORS = ["#F54E00", "#1D4AFF", "#00A37A", "#C98500", "#B62AD9"];
 
-function toHtml(report, meta) {
+function toHtml(report, meta, lenses) {
   const r = normalise(report);
   const brand = r.brand_summary.brand || (meta && meta.origin) || "Brand";
   const row = (k, v) => (v ? `<p><b>${esc(k)}</b> ${esc(v)}</p>` : "");
@@ -406,10 +425,11 @@ ol.lineup .nm{flex:1;font-weight:600}.score{font-variant-numeric:tabular-nums;co
 .cite{font-size:11px;font-weight:700;color:#1D4AFF;text-decoration:none;border:1px solid #c5cff9;border-radius:4px;padding:0 4px}
 .src{list-style:none;margin:8px 0 0;padding:0}.src li{display:grid;grid-template-columns:22px 1fr;gap:8px;padding:8px 0;border-bottom:1px dashed #cfd0c8}
 .src input{margin-top:4px;width:16px;height:16px}.src a{word-break:break-all}.src small{display:block;color:#65675e}
+${typeof LENS_REPORT_CSS === "string" ? LENS_REPORT_CSS : ""}
 @media print{body{background:#fff}.card{box-shadow:none}}
 </style></head><body>
 <h1>Who's buying ${esc(brand)}?</h1>
-<p class="meta">${meta ? esc(meta.origin) + " · " + esc(meta.date) + " · " + meta.pages.length + " pages read" + (meta.model ? " · " + esc(meta.model) : "") : ""} · Made with WhoseMyTG</p>
+<p class="meta">${meta ? esc(meta.origin) + " · " + esc(meta.date) + " · " + meta.pages.length + " pages read" + (meta.model ? " · " + esc(meta.model) : "") + (marketLine(meta) ? " · " + esc(marketLine(meta)) : "") : ""} · Made with WhoseMyTG</p>
 <section class="card"><div class="eyebrow">The brand, decoded</div>
 ${row("Sells:", r.brand_summary.what_they_sell)}
 ${row("Positioning:", r.brand_summary.positioning)}
@@ -424,6 +444,7 @@ ${r.audit.merges.map((m) => `<li>Merged ${esc(m.merged)} into ${esc(m.into)}: ${
 <li>Overlap check: ${esc(r.audit.overlap_check)}</li></ul>
 ${r.flags_for_signoff.length ? `<p class="flag"><b>Run past the client first:</b></p><ul>${r.flags_for_signoff.map((f) => `<li>${esc(f)}</li>`).join("")}</ul>` : ""}
 </section>
+${lensSections(lenses, typeof lensToHtml === "function" ? lensToHtml : null).join("\n")}
 ${sourcesHtml(r, meta)}
 <p class="meta">"Educated guess" means exactly that. Validate with GA4, CRM or interview data before you lock anything.</p>
 </body></html>`;
@@ -449,8 +470,70 @@ ${src.trimmed ? "<p class=\"meta\">Page text was cut in half to fit the provider
 </section>`;
 }
 
+// Small Markdown -> HTML for pasting into Google Docs (headings, lists, bold, italics, code, checkboxes).
+function mdToHtml(md) {
+  const inline = (t) =>
+    esc(t)
+      .replace(/\*\*(.+?)\*\*/g, "<b>$1</b>")
+      .replace(/(^|\W)_(.+?)_(?=\W|$)/g, "$1<i>$2</i>")
+      .replace(/^\[ \] /, "&#9744; ");
+  const out = [];
+  let list = null;
+  let code = null;
+  const close = () => {
+    if (list) out.push(`</${list}>`);
+    list = null;
+  };
+  String(md)
+    .split("\n")
+    .forEach((line) => {
+      if (code !== null) {
+        if (/^```/.test(line)) {
+          out.push(`<pre>${esc(code.join("\n"))}</pre>`);
+          code = null;
+        } else code.push(line);
+        return;
+      }
+      if (/^```/.test(line)) {
+        close();
+        code = [];
+        return;
+      }
+      let m;
+      if ((m = line.match(/^(#{1,4}) (.*)/))) {
+        close();
+        out.push(`<h${m[1].length}>${inline(m[2])}</h${m[1].length}>`);
+      } else if ((m = line.match(/^\s*[-*] (.*)/))) {
+        if (list !== "ul") {
+          close();
+          out.push("<ul>");
+          list = "ul";
+        }
+        out.push(`<li>${inline(m[1])}</li>`);
+      } else if ((m = line.match(/^\d+\. (.*)/))) {
+        if (list !== "ol") {
+          close();
+          out.push("<ol>");
+          list = "ol";
+        }
+        out.push(`<li>${inline(m[1])}</li>`);
+      } else if (line.trim()) {
+        close();
+        out.push(`<p>${inline(line)}</p>`);
+      } else close();
+    });
+  close();
+  return out.join("\n");
+}
+
 if (typeof module !== "undefined") {
   module.exports = {
+    str,
+    arr,
+    esc,
+    starText,
+    mdToHtml,
+    TG_COLORS,
     buildSources,
     pickPages,
     parseModelJson,

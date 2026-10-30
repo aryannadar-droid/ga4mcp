@@ -13,6 +13,13 @@
     <symbol id="i-eye" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2" d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12Z"/><circle cx="12" cy="12" r="3" fill="none" stroke="currentColor" stroke-width="2"/></symbol>
     <symbol id="i-copy" viewBox="0 0 24 24"><rect x="9" y="9" width="12" height="12" rx="2" fill="none" stroke="currentColor" stroke-width="2"/><path fill="none" stroke="currentColor" stroke-width="2" d="M5 15H4a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v1"/></symbol>
     <symbol id="i-down" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" d="M12 4v12m0 0-5-5m5 5 5-5M5 20h14"/></symbol>
+    <symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="2"/><path fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" d="M12 7v5l3 2"/></symbol>
+    <symbol id="i-pencil" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round" d="M4 20h4L19 9l-4-4L4 16v4Z"/></symbol>
+    <symbol id="i-check" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round" d="m5 12 5 5 9-10"/></symbol>
+    <symbol id="i-lock" viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="10" rx="2" fill="currentColor"/><path fill="none" stroke="currentColor" stroke-width="2.2" d="M8 11V8a4 4 0 0 1 8 0v3"/></symbol>
+    <symbol id="i-unlock" viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="10" rx="2" fill="none" stroke="currentColor" stroke-width="2"/><path fill="none" stroke="currentColor" stroke-width="2.2" d="M8 11V8a4 4 0 0 1 7.5-2"/></symbol>
+    <symbol id="i-dice" viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="3" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="9" cy="9" r="1.6" fill="currentColor"/><circle cx="15" cy="15" r="1.6" fill="currentColor"/><circle cx="15" cy="9" r="1.6" fill="currentColor"/><circle cx="9" cy="15" r="1.6" fill="currentColor"/></symbol>
+    <symbol id="i-share" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" d="M12 15V3m0 0L7 8m5-5 5 5M5 13v6a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-6"/></symbol>
     <symbol id="i-redo" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" d="M20 11a8 8 0 1 0-2.3 5.7M20 4v7h-7"/></symbol>
   </svg>
 
@@ -25,9 +32,14 @@
           <p class="tagline" id="tagline">Who's actually going to buy this?</p>
         </div>
       </div>
-      <button id="openSettings" class="icon-btn" type="button" aria-label="Settings" title="Settings">
-        <svg width="18" height="18"><use href="#i-gear"/></svg>
-      </button>
+      <div class="top-actions">
+        <button id="openHistory" class="icon-btn" type="button" aria-label="History" title="History">
+          <svg width="18" height="18"><use href="#i-clock"/></svg>
+        </button>
+        <button id="openSettings" class="icon-btn" type="button" aria-label="Settings" title="Settings">
+          <svg width="18" height="18"><use href="#i-gear"/></svg>
+        </button>
+      </div>
     </header>
 
     <section class="win" id="setup">
@@ -51,6 +63,11 @@
             <button type="button" role="radio" data-n="5">5</button>
           </div>
           <p class="micro" id="tgHint"></p>
+        </div>
+
+        <div class="block two-col">
+          <label class="selectbox"><span class="label">Market</span><select id="market"></select></label>
+          <label class="selectbox"><span class="label">Copy language</span><select id="language"></select></label>
         </div>
 
         <details class="extra">
@@ -84,8 +101,14 @@
   </div>
 
   <div id="dock" class="dock" hidden>
-    <button id="copyText" class="btn" type="button"><svg width="16" height="16"><use href="#i-copy"/></svg>Copy</button>
-    <button id="downloadHtml" class="btn" type="button"><svg width="16" height="16"><use href="#i-down"/></svg>Report</button>
+    <div id="exportMenu" class="menu" hidden role="menu">
+      <button type="button" data-kind="pptx" role="menuitem"><b>Slides</b><small>.pptx for PowerPoint, Keynote, Google Slides</small></button>
+      <button type="button" data-kind="docs" role="menuitem"><b>Google Docs</b><small>Copies it formatted. Paste into a Doc.</small></button>
+      <button type="button" data-kind="html" role="menuitem"><b>Report</b><small>.html you can print to PDF</small></button>
+      <button type="button" data-kind="text" role="menuitem"><b>Plain text</b><small>Markdown for Slack, Notion, email</small></button>
+    </div>
+    <button id="exportBtn" class="btn" type="button" aria-haspopup="menu"><svg width="16" height="16"><use href="#i-share"/></svg>Export</button>
+    <button id="historyDock" class="btn" type="button"><svg width="16" height="16"><use href="#i-clock"/></svg>History</button>
     <button id="again" class="btn" type="button"><svg width="16" height="16"><use href="#i-redo"/></svg>Again</button>
   </div>
 
@@ -130,9 +153,25 @@
     <p id="settingsMsg" class="micro msg" role="status"></p>
   </aside>
 
+  <aside id="historyDrawer" class="drawer" hidden aria-label="History">
+    <div class="drawer-head">
+      <div>
+        <span class="eyebrow">History</span>
+        <h2>The archive</h2>
+      </div>
+      <button id="closeHistory" class="icon-btn" type="button" aria-label="Close history"><svg width="16" height="16"><use href="#i-x"/></svg></button>
+    </div>
+    <p class="micro">Every run is saved here, kits and edits included. The last 8 per brand, in this browser only. Tick two to compare them.</p>
+    <button id="compareBtn" class="btn wide-btn" type="button" disabled>Pick 2 runs to compare</button>
+    <div id="compareOut"></div>
+    <div id="historyList"></div>
+  </aside>
+
+  <script src="vendor/pptxgen.bundle.js"></script>
   <script src="prompt.js"></script>
   <script src="lib.js"></script>
   <script src="providers.js"></script>
+  <script src="lenses.js"></script>
   <script src="sidepanel.js"></script>
 </body>
 </html>

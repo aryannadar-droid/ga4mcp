@@ -55,6 +55,8 @@ HARD RULES
 - Keep it compact: every text field is one or two sentences, each reason to buy is under 25 words, and audit entries are one line each.
 - If the content is thin, mostly empty or looks JavaScript-rendered, say so in brand_summary.content_quality_note and lean on "hypothesis" tags.
 - If EXTRA CONTEXT is supplied, use it. Tag reasons it supports as "client".
+- MARKET: write situations, offers, copy and cultural cues for the market named in the request (currency, spelling, festivals, buying habits). Write all buyer-facing copy (lead_copy, landing_page_hero, tldr) in the copy language named in the request; everything else in English.
+- LOCKED TGs: if the request lists locked TGs, they are final. Do not return them, do not overlap with them, and return only the number of NEW TGs asked for. Score the new TGs relative to the locked ones (the hottest TG may already be locked).
 
 OUTPUT FORMAT
 Return a single JSON object and nothing else (no markdown fences):
@@ -86,10 +88,21 @@ Return a single JSON object and nothing else (no markdown fences):
   "flags_for_signoff": ["claims across the whole brand that need client sign-off"]
 }`;
 
-function buildUserPrompt({ origin, pages, tgCount, extraContext }) {
+function buildUserPrompt({ origin, pages, tgCount, extraContext, market, language, lockedTgs }) {
   const parts = [];
   parts.push(`Brand website: ${origin}`);
-  parts.push(`Number of TGs to return: ${tgCount}`);
+  parts.push(`Market: ${market || "Global"}`);
+  parts.push(`Copy language: ${language || "English"}`);
+  if (lockedTgs && lockedTgs.length) {
+    parts.push(`Number of NEW TGs to return: ${tgCount}`);
+    parts.push("");
+    parts.push("=== LOCKED TGs (final, do not return or overlap) ===");
+    lockedTgs.forEach((t, i) => {
+      parts.push(`${i + 1}. ${t.name} (${t.stars == null ? "unrated" : t.stars + " stars"}): ${t.situation} Split question: ${t.split_question}`);
+    });
+  } else {
+    parts.push(`Number of TGs to return: ${tgCount}`);
+  }
   parts.push("");
   parts.push("=== WEBSITE CONTENT (public pages) ===");
   pages.forEach((p, i) => {

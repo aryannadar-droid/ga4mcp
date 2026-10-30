@@ -1,14 +1,15 @@
 {
   "manifest_version": 3,
   "name": "WhoseMyTG",
-  "version": "0.4.1",
+  "version": "0.5.0",
   "description": "Read a brand's website and find its target groups (TGs): ranked by buy-intent, with reasons to buy, ad angles and landing-page heroes.",
   "permissions": [
     "sidePanel",
     "storage",
     "activeTab",
     "scripting",
-    "tabs"
+    "tabs",
+    "unlimitedStorage"
   ],
   "host_permissions": [
     "https://generativelanguage.googleapis.com/*",
@@ -21,6 +22,7 @@
     "https://api.x.ai/*"
   ],
   "optional_host_permissions": [
+    "<all_urls>",
     "https://*/*",
     "http://*/*"
   ],
