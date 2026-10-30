@@ -52,12 +52,6 @@ const LENS_QUIPS = {
   annotate: ["Squinting at your screen.", "Sticking notes where they hurt."],
 };
 
-const FOOTNOTES = [
-  "P.S. \"Educated guess\" means exactly that. Validate with GA4 or client data before you bet the media budget on it.",
-  "P.S. Stars rate buy-intent for this brand, not how nice the people are. Everyone's lovely.",
-  "P.S. Only public website text gets sent to your AI provider. Your key never leaves this browser.",
-];
-
 const ERROR_TITLES = ["Plot twist.", "Well, that didn't go to plan.", "Hmm. Small hiccup."];
 
 // ---------- settings ----------
@@ -578,6 +572,8 @@ function stopProgress() {
   $("progress").hidden = true;
 }
 
+let toastTimer = null;
+
 function showToast(title, body, isError) {
   const t = $("toast");
   t.innerHTML = "";
@@ -585,6 +581,8 @@ function showToast(title, body, isError) {
   if (body) t.appendChild(el("span", null, body));
   t.className = "toast" + (isError ? " error" : "");
   t.hidden = false;
+  clearTimeout(toastTimer);
+  if (!isError) toastTimer = setTimeout(hideToast, 4500);
   if (isError) t.scrollIntoView({ behavior: "smooth", block: "nearest" });
 }
 
@@ -600,7 +598,8 @@ function setBusy(on) {
   busy = on;
   $("analyze").disabled = on;
   $("again").disabled = on;
-  document.querySelectorAll(".lens-tile, .tg-tool").forEach((b) => (b.disabled = on));
+  document.querySelectorAll(".kit-btn, .tg-act").forEach((b) => (b.disabled = on));
+  if ($("sheetRerun")) $("sheetRerun").disabled = on;
   $("ctaText").textContent = on ? "Snooping around..." : lastReport ? "Run it again" : "Find my TGs";
 }
 
@@ -647,14 +646,6 @@ function initials(name) {
   return ((w[0] || "?")[0] + (w[1] ? w[1][0] : "")).toUpperCase();
 }
 
-function winBar(title) {
-  const bar = el("div", "win-bar");
-  const dots = el("span", "dots");
-  dots.append(el("i"), el("i"), el("i"));
-  append(bar, dots, el("span", "win-title", title));
-  return bar;
-}
-
 function tagChip(tag) {
   const t = String(tag || "hypothesis").toLowerCase();
   return el("span", "tag-chip " + t, tagLabel(t));
@@ -662,12 +653,6 @@ function tagChip(tag) {
 
 function pill(text, kind) {
   return el("span", "pill-s " + (kind || ""), text);
-}
-
-function sectionTitle(title, aside) {
-  const d = el("div", "section-title");
-  append(d, el("h2", null, title), aside ? el("span", null, aside) : null);
-  return d;
 }
 
 function copyBtn(label, getText, cls) {
@@ -684,7 +669,7 @@ function copyBtn(label, getText, cls) {
 }
 
 // Sub-tabs used inside cards and kits. tabs: [[label, () => node]]
-function tabset(tabs, start) {
+function tabset(tabs, start, onShow) {
   const wrap = el("div");
   const bar = el("div", "tabs");
   bar.setAttribute("role", "tablist");
@@ -692,6 +677,7 @@ function tabset(tabs, start) {
   panel.setAttribute("role", "tabpanel");
   const show = (k) => {
     wrap.dataset.tab = k;
+    if (onShow) onShow(k);
     bar.querySelectorAll("button").forEach((b, j) => b.setAttribute("aria-selected", String(j === k)));
     panel.innerHTML = "";
     panel.style.animation = "none";
@@ -765,7 +751,9 @@ function setPath(obj, path, value) {
 }
 
 function touch() {
+  const wasFresh = KIT_IDS.some((id) => kitDone(id) && !kitStale(id));
   lastReport._rev = (lastReport._rev || 0) + 1;
+  if (wasFresh) refreshToolkit(); // kits built on the old TGs now show "re-run"
   saveRunSoon();
 }
 
@@ -797,52 +785,25 @@ function currentTg(order) {
   return normalise(lastReport).tgs.find((t) => t.order === order);
 }
 
-// ---------- rendering: brand, lineup, TG cards ----------
+// ---------- rendering: brand strip and the TG list ----------
+
+let openTg = null; // order of the expanded TG (one at a time)
+let view = "tgs"; // tgs | kits | sources
+const tabState = {}; // TG order -> last tab shown
 
 function renderBrand(r, meta) {
   const bs = r.brand_summary;
-  const card = el("section", "win brand-card");
-  card.appendChild(winBar("the_brand_decoded.txt"));
-  const body = el("div", "win-body");
-  append(body, el("span", "eyebrow", "The brand, decoded"), el("h2", null, bs.brand || new URL(meta.origin).hostname));
-  if (meta.market || meta.language) {
-    const m = el("div", "chips-row static");
-    append(m, pill("📍 " + (meta.market || "Global")), pill("🗣 " + (meta.language || "English")));
-    body.appendChild(m);
+  const card = el("section", "card brand");
+  const top = el("div", "brand-top");
+  append(top, el("h2", null, bs.brand || new URL(meta.origin).hostname), el("span", "brand-meta", [meta.market, meta.language].filter(Boolean).join(" · ")));
+  card.appendChild(top);
+  if (bs.what_they_sell) card.appendChild(el("p", "brand-sells", bs.what_they_sell));
+  if (bs.positioning || bs.who_pays_vs_uses) {
+    const more = el("details", "more");
+    append(more, el("summary", null, "Positioning and who pays"), kv("Positioning", bs.positioning), kv("Who pays vs who uses", bs.who_pays_vs_uses));
+    card.appendChild(more);
   }
-  const facts = el("div", "facts");
-  append(facts, kv("What they sell", bs.what_they_sell), kv("How they position it", bs.positioning), kv("Who pays vs who uses", bs.who_pays_vs_uses));
-  facts.querySelectorAll(".kv").forEach((k) => k.classList.add("fact"));
-  body.appendChild(facts);
-  if (bs.content_quality_note) body.appendChild(el("div", "note", "Heads-up: " + bs.content_quality_note));
-  card.appendChild(body);
-  return card;
-}
-
-function renderLineup(r) {
-  const card = el("section", "win");
-  card.appendChild(winBar("leaderboard.exe"));
-  const ol = el("ol", "lineup");
-  r.tgs.forEach((t, i) => {
-    const li = el("li", t.hot ? "hot" : "");
-    li.style.setProperty("--c", TG_COLORS[i % TG_COLORS.length]);
-    const b = el("button");
-    b.type = "button";
-    const nm = el("span", "nm", (t.locked ? "🔒 " : "") + t.name);
-    nm.appendChild(el("small", null, t.hot ? "🔥 " + heatLabel(t.stars) : heatLabel(t.stars)));
-    const right = el("span", "right");
-    right.appendChild(html("span", null, starsHtml(t.stars)));
-    const meter = el("span", "meter");
-    const fill = el("i");
-    fill.style.width = ((t.stars || 0) / 5) * 100 + "%";
-    meter.appendChild(fill);
-    append(right, el("span", "score", t.stars == null ? "–" : t.stars.toFixed(1) + " / 5"), meter);
-    append(b, el("span", "avatar", String(i + 1)), nm, right);
-    b.addEventListener("click", () => $("tg-" + i).scrollIntoView({ behavior: "smooth", block: "start" }));
-    li.appendChild(b);
-    ol.appendChild(li);
-  });
-  card.appendChild(ol);
+  if (bs.content_quality_note) card.appendChild(el("p", "note", "Heads-up: " + bs.content_quality_note));
   return card;
 }
 
@@ -878,6 +839,7 @@ function whyPanel(t, meta) {
       c.type = "button";
       c.title = real ? "Jump to source page " + n : "The AI cited a page that doesn't exist. Treat this claim as unverified.";
       c.addEventListener("click", () => {
+        showView("sources");
         const row = $("src-" + n);
         if (!row) return;
         $("sources").open = true;
@@ -953,54 +915,46 @@ function finePanel(t) {
   return p;
 }
 
-function toolBtn(name, label, onClick, pressed) {
-  const b = el("button", "tg-tool");
+function tgAction(label, onClick, title) {
+  const b = el("button", "tg-act", label);
   b.type = "button";
-  b.title = label;
-  b.setAttribute("aria-label", label);
-  if (pressed != null) b.setAttribute("aria-pressed", String(pressed));
-  b.appendChild(icon(name, 14));
+  b.title = title || label;
   b.disabled = busy;
   b.addEventListener("click", onClick);
   return b;
 }
 
-function renderTg(t, i, meta, tabStart) {
+function renderTg(t, i, meta) {
   const o = t.order;
   const isEditing = editing.has(o);
-  const card = el("section", "win tg" + (t.hot ? " hot" : "") + (t.locked ? " locked" : "") + (isEditing ? " editing" : ""));
-  card.id = "tg-" + i;
-  card.dataset.order = o;
-  card.style.setProperty("--c", TG_COLORS[i % TG_COLORS.length]);
-  const bar = winBar(`tg_${i + 1}.persona`);
-  const tools = el("span", "tg-tools");
-  append(
-    tools,
-    toolBtn(isEditing ? "check" : "pencil", isEditing ? "Done editing" : "Edit this TG", () => toggleEdit(o)),
-    toolBtn(t.locked ? "lock" : "unlock", t.locked ? "Unlock (Run again may replace it)" : "Lock (Run again keeps it)", () => toggleLock(o), t.locked),
-    toolBtn("dice", "Re-roll just this TG", () => rerollTg(o))
-  );
-  append(bar, tools);
-  card.appendChild(bar);
+  const open = openTg === o || isEditing;
+  const item = el("section", "tg-item" + (open ? " open" : "") + (t.hot ? " hot" : "") + (isEditing ? " editing" : ""));
+  item.id = "tg-" + i;
+  item.dataset.order = o;
+  item.style.setProperty("--c", TG_COLORS[i % TG_COLORS.length]);
 
-  const body = el("div", "win-body");
-  const head = el("div", "tg-head");
-  const txt = el("div");
-  const badges = el("div", "badges");
-  append(
-    badges,
-    t.hot ? el("span", "hot-badge", "🔥 Hottest TG") : null,
-    t.locked ? el("span", "mini-badge", "🔒 Locked") : null,
-    t.edited ? el("span", "mini-badge", "✎ Edited") : null,
-    tagChip(t.evidence)
-  );
-  append(txt, badges, ed(el("h3", null, t.name), o, "name"), t.tldr || isEditing ? ed(el("p", "tldr", t.tldr), o, "tldr") : null);
-  append(head, el("span", "avatar big", initials(t.name)), txt);
-  body.appendChild(head);
+  const head = el("button", "tg-row");
+  head.type = "button";
+  head.setAttribute("aria-expanded", String(open));
+  const name = el("span", "tg-name");
+  const title = el("b", null, (t.hot ? "🔥 " : "") + t.name);
+  append(name, title, t.tldr ? el("small", null, t.tldr) : null);
+  const score = el("span", "tg-score");
+  append(score, html("span", null, starsHtml(t.stars)), el("small", null, (t.locked ? "🔒 " : "") + (t.stars == null ? "unrated" : t.stars.toFixed(1))));
+  append(head, el("span", "rank", String(i + 1)), name, score);
+  head.addEventListener("click", () => {
+    if (isEditing) return;
+    openTg = open ? null : o;
+    renderTgList();
+    if (openTg != null) $("tg-" + i).scrollIntoView({ behavior: "smooth", block: "nearest" });
+  });
+  item.appendChild(head);
+  if (!open) return item;
 
-  const rating = el("div", "rating-box");
-  const line = el("div", "rating-line");
+  const body = el("div", "tg-body");
   if (isEditing) {
+    append(body, edKv("Name", t.name, o, "name"), edKv("One-liner", t.tldr, o, "tldr"));
+    const row = el("div", "kv");
     const inp = el("input", "stars-input");
     inp.type = "number";
     inp.min = 0;
@@ -1014,77 +968,76 @@ function renderTg(t, i, meta, tabStart) {
       raw._edited = true;
       touch();
     });
-    append(line, inp, el("span", "heat", "stars (0–5, halves allowed). Order updates when you hit Done."));
+    append(row, el("b", null, "Stars (0–5, halves allowed)"), inp);
+    append(body, row, edKv("Why that score", t.stars_why, o, "buy_score.why"));
   } else {
-    append(
-      line,
-      html("span", "rating-big", starsHtml(t.stars)),
-      el("span", "score", t.stars == null ? "" : t.stars.toFixed(1)),
-      el("span", "heat", heatLabel(t.stars))
-    );
+    const verdict = el("p", "verdict");
+    append(verdict, el("b", null, heatLabel(t.stars) + " "), document.createTextNode(t.stars_why || ""));
+    body.appendChild(verdict);
   }
-  append(rating, el("span", "eyebrow", "Buy-o-meter"), line, t.stars_why || isEditing ? ed(el("p", null, t.stars_why), o, "buy_score.why") : null);
-  body.appendChild(rating);
-
   if (t.split_question || isEditing) {
     const b = el("div", "bouncer");
-    append(b, el("span", "eyebrow", "The bouncer question"), ed(el("span", null, t.split_question), o, "split_question"));
+    append(b, el("span", "eyebrow", "Bouncer question"), ed(el("span", null, t.split_question), o, "split_question"));
     body.appendChild(b);
   }
-
   // Panels re-read the TG on every tab switch so edits made in one tab show in the others.
-  const tabs = tabset(
-    [
-      ["Who", () => whoPanel(currentTg(o))],
-      ["Why buy", () => whyPanel(currentTg(o), meta)],
-      ["Pitch", () => pitchPanel(currentTg(o), meta)],
-      ["Fine print", () => finePanel(currentTg(o))],
-    ],
-    tabStart
+  body.appendChild(
+    tabset(
+      [
+        ["Who", () => whoPanel(currentTg(o))],
+        ["Why buy", () => whyPanel(currentTg(o), meta)],
+        ["Pitch", () => pitchPanel(currentTg(o), meta)],
+        ["Fine print", () => finePanel(currentTg(o))],
+      ],
+      tabState[o] || 0,
+      (k) => (tabState[o] = k)
+    )
   );
-  body.appendChild(tabs);
-  card.appendChild(body);
-  return card;
+  const acts = el("div", "tg-actions");
+  append(
+    acts,
+    tgAction(isEditing ? "✓ Done" : "✎ Edit", () => toggleEdit(o)),
+    tgAction(t.locked ? "🔒 Locked" : "Lock", () => toggleLock(o), t.locked ? "Unlock: Run again may replace it" : "Lock: Run again keeps it"),
+    tgAction("🎲 Re-roll", () => rerollTg(o), "Swap just this TG for a fresh one"),
+    t.edited ? el("small", "muted", "edited") : null
+  );
+  body.appendChild(acts);
+  item.appendChild(body);
+  return item;
 }
 
-function rerenderCard(order) {
+function renderTgList() {
+  const box = $("tgList");
+  if (!box || !lastReport) return;
   const r = normalise(lastReport);
-  const i = r.tgs.findIndex((t) => t.order === order);
-  const old = document.querySelector(`.tg[data-order="${order}"]`);
-  if (i < 0 || !old) return;
-  const tab = Number(old.querySelector("[data-tab]") ? old.querySelector("[data-tab]").dataset.tab : 0);
-  old.replaceWith(renderTg(r.tgs[i], i, lastMeta, tab));
+  box.replaceChildren(...r.tgs.map((t, i) => renderTg(t, i, lastMeta)));
 }
 
 function toggleEdit(order) {
-  if (editing.has(order)) {
-    editing.delete(order);
-    renderReport(lastReport, lastMeta); // re-sort in case the stars changed
-    const r = normalise(lastReport);
-    const i = r.tgs.findIndex((t) => t.order === order);
-    if (i >= 0) $("tg-" + i).scrollIntoView({ block: "nearest" });
-  } else {
+  if (editing.has(order)) editing.delete(order);
+  else {
     editing.add(order);
-    rerenderCard(order);
+    openTg = order;
   }
+  renderTgList(); // re-sorts in case the stars changed
+  const i = normalise(lastReport).tgs.findIndex((t) => t.order === order);
+  if (i >= 0) $("tg-" + i).scrollIntoView({ block: "nearest" });
 }
 
 function toggleLock(order) {
   const t = rawTg(order);
   t._locked = !t._locked;
   saveRunSoon();
-  rerenderCard(order);
-  $("lineupSlot").replaceChildren(renderLineup(normalise(lastReport)));
+  renderTgList();
 }
 
 // ---------- rendering: sources, receipts ----------
 
 function renderReceipts(r) {
-  const card = el("section", "win");
-  card.appendChild(winBar("receipts.log"));
-  const d = el("details", "win-body receipts");
+  const card = el("section", "card");
+  const d = el("details", "receipts");
   const sum = el("summary");
-  append(sum, el("span", "eyebrow", "The receipts"), el("b", null, "How these TGs were locked ▾"));
+  append(sum, el("b", null, "How these TGs were locked"), el("small", "muted", "candidates, merges, overlap check"));
   d.appendChild(sum);
   if (r.audit.candidates_considered.length) {
     d.appendChild(el("b", "eyebrow", "Suspects considered"));
@@ -1115,16 +1068,15 @@ function renderReceipts(r) {
 
 function renderSources(r, meta) {
   const src = buildSources(r, meta);
-  const card = el("section", "win");
-  card.appendChild(winBar("sources.bib"));
-  const d = el("details", "win-body sources");
+  const card = el("section", "card");
+  const d = el("details", "sources");
   d.id = "sources";
   d.open = true;
   const sum = el("summary");
   const done = el("span", "src-count");
-  append(sum, el("span", "eyebrow", "Citation checklist"), el("b", null, `${src.rows.length} pages read · ${src.cited}/${src.claims} reasons cited`), done);
+  append(sum, el("b", null, `${src.rows.length} pages read · ${src.cited}/${src.claims} reasons cited`), done);
   d.appendChild(sum);
-  d.appendChild(el("p", "micro", "Tick a page once you've checked the claims citing it against the live site. Unticked means unverified."));
+  d.appendChild(el("p", "micro", "Tick each page once you've checked its claims on the live site."));
   if (src.siteUncited) {
     d.appendChild(el("div", "note", `${src.siteUncited} reason${src.siteUncited > 1 ? "s are" : " is"} tagged "Straight from the site" but cite no page. Check those by hand.`));
   }
@@ -1178,42 +1130,44 @@ function renderSources(r, meta) {
 
 // ---------- department kits ----------
 
-function renderToolkit() {
-  const wrap = el("div");
-  const grid = el("div", "lens-grid");
-  const tile = (id, title, blurb, onClick) => {
-    const b = el("button", "lens-tile");
-    b.type = "button";
-    b.id = "tile-" + id;
-    b.disabled = busy;
-    const done = lastLenses[id] && lastLenses[id].data;
-    const status = el("span", "lens-status", done ? (lastLenses[id].rev !== (lastReport._rev || 0) ? "TGs changed · re-run" : "Done ✓ · re-run") : "Run it →");
-    append(b, el("b", null, title), el("small", null, blurb), status);
-    if (done) b.classList.add("done");
-    b.addEventListener("click", onClick);
-    return b;
-  };
-  LENS_ORDER.forEach((id) => grid.appendChild(tile(id, LENSES[id].label, LENSES[id].blurb, () => runLens(id))));
-  wrap.appendChild(grid);
-  const shot = tile("annotate", "📸 Annotate my screen", "Scroll to the bit you care about, then hit this. Notes get pinned on it.", runAnnotate);
-  shot.classList.add("wide");
-  wrap.appendChild(shot);
-  return wrap;
+const KIT_META = {
+  media: ["📣", "Media kit", "Ad copy that fits every box"],
+  seo: ["🔎", "SEO kit", "Searches, gaps, on-page, FAQ schema"],
+  cro: ["🧪", "CRO kit", "Message match, objections, tests, audit"],
+  design: ["🎨", "Design kit", "Palette, imagery, landing page plan"],
+  annotate: ["📸", "Annotate my screen", "Scroll to the bit you care about first"],
+};
+const KIT_IDS = [...LENS_ORDER, "annotate"];
+
+function kitDone(id) {
+  return !!(lastLenses[id] && lastLenses[id].data);
 }
 
-function lensCard(id, title, body) {
-  const L = lastLenses[id];
-  const card = el("section", "win lens-card");
-  card.id = "lens-" + id;
-  const bar = winBar(LENSES[id].file);
-  bar.appendChild(el("span", "win-meta", L.model || ""));
-  card.appendChild(bar);
-  const b = el("div", "win-body");
-  b.appendChild(el("span", "eyebrow", title));
-  if (L.rev !== (lastReport._rev || 0)) b.appendChild(el("div", "note", "The TGs changed after this ran. Re-run the kit for fresh results."));
-  append(b, body);
-  card.appendChild(b);
-  return card;
+function kitStale(id) {
+  return kitDone(id) && lastLenses[id].rev !== (lastReport._rev || 0);
+}
+
+function renderToolkit() {
+  const list = el("div", "card kit-list");
+  KIT_IDS.forEach((id) => {
+    const [emoji, name, blurb] = KIT_META[id];
+    const done = kitDone(id);
+    const row = el("div", "kit-row" + (done ? " done" : ""));
+    row.id = "kit-" + id;
+    const txt = el("div", "kit-text");
+    append(txt, el("b", null, name), el("small", null, kitStale(id) ? "TGs changed since. Re-run for fresh results." : blurb));
+    const btn = el("button", "kit-btn" + (done ? "" : " go"), done ? "Open" : "Run");
+    btn.type = "button";
+    btn.disabled = busy;
+    btn.addEventListener("click", () => (done ? openSheet(id) : id === "annotate" ? runAnnotate() : runLens(id)));
+    append(row, el("span", "kit-icon", emoji), txt, btn);
+    if (done) {
+      txt.style.cursor = "pointer";
+      txt.addEventListener("click", () => openSheet(id));
+    }
+    list.appendChild(row);
+  });
+  return list;
 }
 
 function limItem(x) {
@@ -1574,29 +1528,45 @@ const LENS_RENDER = {
   annotate: ["Notes pinned on your screen", renderAnnotate],
 };
 
-function renderLensOutputs() {
-  const out = $("lensOut");
-  if (!out) return;
-  out.innerHTML = "";
-  [...LENS_ORDER, "annotate"].forEach((id) => {
-    if (!lastLenses[id] || !lastLenses[id].data) return;
-    const [title, fn] = LENS_RENDER[id];
-    out.appendChild(lensCard(id, title, fn(lastLenses[id].data)));
-  });
+let sheetId = null;
+
+function openSheet(id) {
+  const L = lastLenses[id];
+  if (!L || !L.data) return;
+  sheetId = id;
+  const [emoji, name] = KIT_META[id];
+  $("sheetTitle").textContent = `${emoji} ${name}`;
+  $("sheetMeta").textContent = [L.model, L.date ? fmtDate(L.date) : ""].filter(Boolean).join(" · ");
+  const body = $("sheetBody");
+  body.innerHTML = "";
+  if (kitStale(id)) body.appendChild(el("p", "note", "The TGs changed after this ran. Re-run for fresh results."));
+  body.appendChild(LENS_RENDER[id][1](L.data));
+  $("sheetRerun").disabled = busy;
+  $("sheet").hidden = false;
+  body.scrollTop = 0;
+}
+
+function closeSheet() {
+  $("sheet").hidden = true;
+  sheetId = null;
 }
 
 function refreshToolkit() {
   const slot = $("toolkitSlot");
   if (slot) slot.replaceChildren(renderToolkit());
-  renderLensOutputs();
+  const n = KIT_IDS.filter(kitDone).length;
+  const c = document.querySelector('[data-view="kits"] .count');
+  if (c) c.textContent = n ? `${n}/${KIT_IDS.length}` : "";
 }
 
-function lensRunning(id, on, note) {
-  const t = $("tile-" + id);
-  if (!t) return;
-  t.classList.toggle("running", on);
-  const s = t.querySelector(".lens-status");
-  if (on) s.textContent = note || pick(LENS_QUIPS[id] || ["Working..."]);
+function lensRunning(id, on) {
+  const row = $("kit-" + id);
+  if (!row) return;
+  row.classList.toggle("running", on);
+  if (on) {
+    row.querySelector("small").textContent = pick(LENS_QUIPS[id] || ["Working..."]);
+    row.querySelector(".kit-btn").textContent = "Working…";
+  }
 }
 
 async function lensCall(id, user) {
@@ -1628,6 +1598,7 @@ async function runLens(id) {
   if (busy || !lastReport) return;
   setBusy(true);
   hideToast();
+  showView("kits");
   lensRunning(id, true);
   const t0 = Date.now();
   try {
@@ -1644,7 +1615,7 @@ async function runLens(id) {
     saveRunSoon();
     setBusy(false);
     refreshToolkit();
-    $("lens-" + id).scrollIntoView({ behavior: "smooth", block: "start" });
+    openSheet(id);
     showToast(`${LENSES[id].label} is ready.`, ` Took ${Math.round((Date.now() - t0) / 1000)}s.`);
   } catch (e) {
     showToast(pick(ERROR_TITLES), errorText(e), true);
@@ -1672,6 +1643,7 @@ async function runAnnotate() {
   if (busy || !lastReport) return;
   setBusy(true);
   hideToast();
+  showView("kits");
   lensRunning("annotate", true);
   try {
     const tab = await activeTab();
@@ -1706,7 +1678,7 @@ async function runAnnotate() {
     saveRunSoon();
     setBusy(false);
     refreshToolkit();
-    $("lens-annotate").scrollIntoView({ behavior: "smooth", block: "start" });
+    openSheet("annotate");
     showToast("Screen annotated.", img ? "" : " Chrome didn't allow a screenshot, so you get the notes without the picture.");
   } catch (e) {
     showToast(pick(ERROR_TITLES), errorText(e), true);
@@ -1719,32 +1691,70 @@ async function runAnnotate() {
 
 // ---------- the whole report ----------
 
+const VIEWS = [
+  ["tgs", "TGs"],
+  ["kits", "Toolkit"],
+  ["sources", "Sources"],
+];
+
+function showView(v) {
+  view = v;
+  document.querySelectorAll(".view-tabs button").forEach((b) => b.setAttribute("aria-selected", String(b.dataset.view === v)));
+  document.querySelectorAll(".view").forEach((n) => (n.hidden = n.dataset.view !== v));
+}
+
+function compactSetup(on) {
+  $("setup").classList.toggle("compact", on);
+  if (on && lastMeta) {
+    const host = new URL(lastMeta.origin).hostname.replace(/^www\./, "");
+    const n = lastReport && lastReport.tgs ? lastReport.tgs.length : 0;
+    $("compactText").textContent = [host, `${n} TGs`, lastMeta.market].filter(Boolean).join(" · ");
+  }
+}
+
 function renderReport(report, meta) {
   const r = normalise(report);
+  if (openTg == null || !r.tgs.some((t) => t.order === openTg)) openTg = r.tgs[0] ? r.tgs[0].order : null;
   const out = $("output");
   out.innerHTML = "";
-  out.classList.add("cards-enter");
-  out.appendChild(renderBrand(r, meta));
-  out.appendChild(sectionTitle("The lineup", "ranked by buy-intent"));
+  compactSetup(true);
+
+  const nav = el("div", "view-tabs");
+  nav.setAttribute("role", "tablist");
+  const counts = { tgs: String(r.tgs.length), kits: "", sources: String(meta.pages.length) };
+  VIEWS.forEach(([id, label]) => {
+    const b = el("button");
+    b.type = "button";
+    b.dataset.view = id;
+    b.setAttribute("role", "tab");
+    append(b, el("span", null, label), el("span", "count", counts[id]));
+    b.addEventListener("click", () => showView(id));
+    nav.appendChild(b);
+  });
+  out.appendChild(nav);
+
+  const tgs = el("div", "view");
+  tgs.dataset.view = "tgs";
+  const list = el("div", "tg-list");
+  list.id = "tgList";
+  append(tgs, renderBrand(r, meta), list);
+
+  const kits = el("div", "view");
+  kits.dataset.view = "kits";
+  kits.appendChild(el("p", "view-intro", "One click per team. Each kit builds on the TGs above, and everything lands in your export."));
   const slot = el("div");
-  slot.id = "lineupSlot";
-  slot.appendChild(renderLineup(r));
-  out.appendChild(slot);
-  out.appendChild(sectionTitle("Meet your TGs", `${r.tgs.length} personas, zero overlap`));
-  r.tgs.forEach((t, i) => out.appendChild(renderTg(t, i, meta)));
-  out.appendChild(sectionTitle("The toolkit", "one click per department"));
-  const kit = el("div");
-  kit.id = "toolkitSlot";
-  out.appendChild(kit);
-  const lensOut = el("div");
-  lensOut.id = "lensOut";
-  out.appendChild(lensOut);
+  slot.id = "toolkitSlot";
+  kits.appendChild(slot);
+
+  const sources = el("div", "view");
+  sources.dataset.view = "sources";
+  append(sources, renderSources(r, meta), renderReceipts(r));
+
+  append(out, tgs, kits, sources);
+  renderTgList();
   refreshToolkit();
-  out.appendChild(renderReceipts(r));
-  out.appendChild(sectionTitle("Sources", "what the AI actually read"));
-  out.appendChild(renderSources(r, meta));
+  showView(view);
   $("dock").hidden = false;
-  $("footnote").textContent = pick(FOOTNOTES);
   return r;
 }
 
@@ -1821,7 +1831,6 @@ async function analyze() {
 
     $("output").innerHTML = "";
     $("dock").hidden = true;
-    $("footnote").textContent = "";
     startProgress();
     progressOn = true;
 
@@ -1896,6 +1905,8 @@ async function analyze() {
       tgCount,
     };
     runId = "r" + Date.now().toString(36);
+    view = "tgs";
+    openTg = null;
     const secs = Math.round((Date.now() - progress.t0) / 1000);
     stopProgress();
     progressOn = false;
@@ -1918,7 +1929,7 @@ async function analyze() {
 // Replaces one TG with a fresh one that doesn't overlap the others. Uses the pages already read.
 async function rerollTg(order) {
   if (busy || !lastReport || !lastSite) return;
-  const card = document.querySelector(`.tg[data-order="${order}"]`);
+  const card = document.querySelector(`.tg-item[data-order="${order}"]`);
   setBusy(true);
   hideToast();
   if (card) card.classList.add("rolling");
@@ -1945,11 +1956,12 @@ async function rerollTg(order) {
     if (!fresh) throw new UserError("The AI came back empty-handed. Try again.");
     lastReport.tgs[order] = fresh;
     editing.delete(order);
+    openTg = order;
     touch();
     renderReport(lastReport, lastMeta);
     const i = normalise(lastReport).tgs.findIndex((t) => t.order === order);
-    if (i >= 0) $("tg-" + i).scrollIntoView({ behavior: "smooth", block: "start" });
-    showToast("Fresh TG, hot off the press.", ` Meet ${str(fresh.name)}. Your toolkit results now point at the old lineup, so re-run any you need.`);
+    if (i >= 0) $("tg-" + i).scrollIntoView({ behavior: "smooth", block: "nearest" });
+    showToast("Fresh TG, hot off the press.", ` Meet ${str(fresh.name)}.`);
   } catch (e) {
     showToast(pick(ERROR_TITLES), errorText(e), true);
     if (card) card.classList.remove("rolling");
@@ -2082,6 +2094,9 @@ function loadRun(run) {
   lastLenses = run.lenses || {};
   runId = run.id;
   editing.clear();
+  view = "tgs";
+  openTg = null;
+  closeSheet();
   renderReport(lastReport, lastMeta);
   setBusy(false);
   window.scrollTo({ top: 0, behavior: "smooth" });
@@ -2482,8 +2497,17 @@ $("closeSettings").addEventListener("click", closePanels);
 $("closeHistory").addEventListener("click", closePanels);
 $("scrim").addEventListener("click", closePanels);
 $("compareBtn").addEventListener("click", compareRuns);
+$("compactChange").addEventListener("click", () => compactSetup(false));
+$("sheetBack").addEventListener("click", closeSheet);
+$("sheetRerun").addEventListener("click", () => {
+  const id = sheetId;
+  closeSheet();
+  if (id === "annotate") runAnnotate();
+  else if (id) runLens(id);
+});
 document.addEventListener("keydown", (e) => {
   if (e.key === "Escape") {
+    closeSheet();
     closePanels();
     $("exportMenu").hidden = true;
   }

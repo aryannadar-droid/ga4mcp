@@ -20,6 +20,7 @@
     <symbol id="i-unlock" viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="10" rx="2" fill="none" stroke="currentColor" stroke-width="2"/><path fill="none" stroke="currentColor" stroke-width="2.2" d="M8 11V8a4 4 0 0 1 7.5-2"/></symbol>
     <symbol id="i-dice" viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="3" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="9" cy="9" r="1.6" fill="currentColor"/><circle cx="15" cy="15" r="1.6" fill="currentColor"/><circle cx="15" cy="9" r="1.6" fill="currentColor"/><circle cx="9" cy="15" r="1.6" fill="currentColor"/></symbol>
     <symbol id="i-share" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" d="M12 15V3m0 0L7 8m5-5 5 5M5 13v6a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-6"/></symbol>
+    <symbol id="i-back" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" d="M15 5l-7 7 7 7"/></symbol>
     <symbol id="i-redo" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" d="M20 11a8 8 0 1 0-2.3 5.7M20 4v7h-7"/></symbol>
   </svg>
 
@@ -44,6 +45,10 @@
 
     <section class="win" id="setup">
       <div class="win-bar"><span class="dots"><i></i><i></i><i></i></span><span>new_investigation.exe</span></div>
+      <div class="compact-row">
+        <span id="compactText"></span>
+        <button id="compactChange" class="link-btn" type="button">Change</button>
+      </div>
       <div class="win-body">
         <div class="target">
           <img id="favicon" alt="" width="28" height="28">
@@ -97,7 +102,6 @@
 
     <section id="output"></section>
 
-    <p class="footnote" id="footnote"></p>
   </div>
 
   <div id="dock" class="dock" hidden>
@@ -151,6 +155,18 @@
       <button id="loadModels" class="btn" type="button">Load my models</button>
     </div>
     <p id="settingsMsg" class="micro msg" role="status"></p>
+  </aside>
+
+  <aside id="sheet" class="sheet" hidden aria-label="Kit results">
+    <div class="sheet-head">
+      <button id="sheetBack" class="icon-btn" type="button" aria-label="Back"><svg width="16" height="16"><use href="#i-back"/></svg></button>
+      <div class="sheet-title">
+        <h2 id="sheetTitle"></h2>
+        <small id="sheetMeta"></small>
+      </div>
+      <button id="sheetRerun" class="btn small-btn" type="button"><svg width="14" height="14"><use href="#i-redo"/></svg>Re-run</button>
+    </div>
+    <div id="sheetBody" class="sheet-body"></div>
   </aside>
 
   <aside id="historyDrawer" class="drawer" hidden aria-label="History">

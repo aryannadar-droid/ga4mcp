@@ -1,4 +1,4 @@
-WHOSEMYTG v0.5.0 - how to load it in Chrome
+WHOSEMYTG v0.6.0 - how to load it in Chrome
 
 1. Unzip this folder somewhere permanent (Chrome reads from it every time, so don't delete it).
 2. In Chrome, open chrome://extensions
@@ -27,7 +27,9 @@ First-time setup (once per person): bring your own AI key
 Using it:
 8. Open the brand's homepage in the tab.
 9. Pick how many TGs (2-5), the market and the copy language, then click "Find my TGs". Chrome asks once per site to allow reading it: click Allow.
-10. Wait 20-60 seconds. You get:
+10. Wait 20-60 seconds. Results come in three views (switch at the top): TGs, Toolkit, Sources.
+    Tap a TG row to open it; kit results open full-panel with a back button. The panel stays light on purpose:
+    the full detail is in Export. You get:
     - The lineup: every TG ranked by a 0-5 star buy-intent score (half stars allowed).
       The top one is flagged "Hottest TG": the persona the brand sells to even if the others don't bite.
     - A card per TG with tabs: Who / Why buy / Pitch (lead line + a mock landing-page hero) / Fine print.

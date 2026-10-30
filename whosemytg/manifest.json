@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "WhoseMyTG",
-  "version": "0.5.0",
+  "version": "0.6.0",
   "description": "Read a brand's website and find its target groups (TGs): ranked by buy-intent, with reasons to buy, ad angles and landing-page heroes.",
   "permissions": [
     "sidePanel",
