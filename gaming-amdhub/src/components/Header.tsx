@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { AnimatePresence, m } from 'framer-motion';
 import { site } from '../content';
+import { barActive } from '../lib/bar';
 import { DUR, EASE } from '../lib/motion';
 import { Link } from '../lib/router';
 import { CloseIcon, MenuIcon } from './Icons';
@@ -14,6 +15,8 @@ import { Wordmark } from './Wordmark';
 export function Header() {
   const [scrolled, setScrolled] = useState(false);
   const [open, setOpen] = useState(false);
+  // the pinned section bar takes over (with its own Where to buy) once the hero has passed
+  const hidden = barActive.use() && !open;
 
   useEffect(() => {
     let raf = 0;
@@ -41,7 +44,8 @@ export function Header() {
   return (
     <header
       className="fixed inset-x-0 top-0 z-50"
-      style={{ transform: scrolled ? 'translateY(-8px)' : 'none', transition: t }}
+      style={{ transform: hidden ? 'translateY(-100%)' : scrolled ? 'translateY(-8px)' : 'none', transition: t }}
+      inert={hidden}
     >
       <div
         aria-hidden

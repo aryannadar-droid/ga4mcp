@@ -3,11 +3,13 @@ import { products, productsIntro, type Product } from '../content';
 import { track } from '../lib/analytics';
 import { formatINR } from '../lib/format';
 import { fadeUp, stagger } from '../lib/motion';
-import { Link } from '../lib/router';
+import { navigate } from '../lib/router';
+import { selectedProduct } from '../lib/sellers';
 import { useCountUp } from '../hooks/useCountUp';
 import { useInView } from '../hooks/useInView';
 import { GoldBadge } from '../components/GoldBadge';
 import { ArrowRight } from '../components/Icons';
+import { PlainKey } from '../components/PlainKey';
 import { SectionHeading } from '../components/SectionHeading';
 
 export function ProductStrip() {
@@ -24,12 +26,13 @@ export function ProductStrip() {
           aria-label="Products"
         >
           {products.map((p) => (
-            <m.li key={p.id} variants={fadeUp} id={p.id === 'rx-9060-xt' ? 'graphics' : undefined} className="w-[78%] shrink-0 snap-start sm:w-[44%] lg:w-auto">
+            <m.li key={p.id} variants={fadeUp} id={p.id === 'rx-9060xt-8' ? 'graphics' : undefined} className="w-[78%] shrink-0 snap-start sm:w-[44%] lg:w-auto">
               <ProductCard p={p} />
             </m.li>
           ))}
         </m.ul>
         <p className="mt-4 text-xs text-muted">{productsIntro.priceNote}</p>
+        <PlainKey className="mt-6" />
       </div>
     </section>
   );
@@ -45,23 +48,27 @@ function ProductCard({ p }: { p: Product }) {
         {p.badge && <GoldBadge className="absolute top-3 left-3">{p.badge}</GoldBadge>}
       </div>
       <div className="flex flex-1 flex-col p-5">
-        <h3 className="text-lg font-semibold">{p.name}</h3>
-        <p className="mt-1 text-sm text-muted">
-          <span className="font-medium text-fg">{p.stat}</span> {p.statLabel}
-        </p>
+        <h3 className="text-base font-medium text-muted">{p.name}</h3>
+        {/* one big, legible stat per chip — no spec tables on the homepage */}
+        <p className="mt-1 font-display text-2xl leading-tight font-semibold text-fg">{p.stat}</p>
         <p className="mt-5 text-sm text-muted">{productsIntro.fromLabel}</p>
         <p className="placeholder-val font-display text-3xl font-semibold text-gold-soft" aria-label={`${productsIntro.fromLabel} ${formatINR(p.fromPrice)}`}>
           {formatINR(price)}
         </p>
-        <Link
-          href={p.sellersHref}
+        <button
+          type="button"
+          data-buy="view-sellers"
           className="link mt-5 inline-flex items-center gap-1.5 self-start py-1 font-semibold"
-          onClick={() => track('store_search', { section: 'from_strip', product: p.name })}
+          onClick={() => {
+            selectedProduct.set(p.id);
+            track('store_search', { section: 'from_strip', product: p.name });
+            navigate('/#sellers');
+          }}
         >
           {productsIntro.cta}
           <ArrowRight width={16} height={16} />
           <span className="sr-only">for {p.name}</span>
-        </Link>
+        </button>
       </div>
     </div>
   );

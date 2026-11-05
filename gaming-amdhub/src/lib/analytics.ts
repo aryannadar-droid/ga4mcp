@@ -14,7 +14,10 @@ export type EventName =
   | 'bundle_redeem_click'
   | 'builder_start'
   /* Added with the 3D views (not in the original brief's list). */
-  | 'view_3d';
+  | 'view_3d'
+  /* Added in the phone-first revision. */
+  | 'scroll_depth'
+  | 'first_buy_visible';
 
 export interface EventParams {
   section: string;
@@ -42,7 +45,7 @@ export function track(event: EventName, params: EventParams) {
   if (import.meta.env.DEV) console.info('[dataLayer]', payload);
 }
 
-/** partner_click always carries seller_name, product, persona and link_url. */
-export function trackPartner(p: { seller_name: string; product: string; link_url: string; section: string }) {
+/** partner_click always carries seller_name, product, persona, link_url and utm_campaign, plus path (B) or build (A / C). */
+export function trackPartner(p: { seller_name: string; product: string; link_url: string; section: string; utm_campaign: string; path?: string; build?: string }) {
   track('partner_click', p);
 }

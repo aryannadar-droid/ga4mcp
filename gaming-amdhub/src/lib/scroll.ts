@@ -21,7 +21,7 @@ export function scrollToTarget(hash: string, immediate = false) {
   if (!el) return;
   if (lenis) {
     lenis.resize(); // after a route change Lenis still holds the previous page's height
-    lenis.scrollTo(el, { offset: -72, immediate });
+    lenis.scrollTo(el, { immediate }); // Lenis already applies html scroll-padding-top (80px)
   }
   else el.scrollIntoView({ behavior: immediate || prefersReducedMotion() ? 'auto' : 'smooth' });
   // Move focus for keyboard and screen-reader users without a second scroll jump.

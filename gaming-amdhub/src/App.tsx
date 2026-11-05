@@ -3,10 +3,11 @@ import { domAnimation, LazyMotion, MotionConfig } from 'framer-motion';
 import { personas, site } from './content';
 import { useHashScroll, usePath } from './lib/router';
 import { setLenis } from './lib/scroll';
+import { useScrollTracking } from './lib/scrollTracking';
 import { useReducedMotion } from './hooks/useReducedMotion';
 import { Header } from './components/Header';
 import { Footer } from './components/Footer';
-import { MobileBar } from './components/MobileBar';
+import { SectionBar } from './components/SectionBar';
 import Home from './pages/Home';
 
 // Persona pages are small (~5 KB gzip together) and are landing pages in their own right:
@@ -51,6 +52,7 @@ export default function App() {
   const reduced = useReducedMotion();
   useSmoothScroll(reduced);
   useHashScroll(path);
+  useScrollTracking(path);
   const Page = routes[path.replace(/\/+$/, '') || '/'] ?? NotFound;
 
   return (
@@ -61,11 +63,11 @@ export default function App() {
           {site.skipLink}
         </a>
         <Header />
+        <SectionBar />
         <Suspense fallback={<main id="main" className="min-h-screen" />}>
           <Page />
         </Suspense>
         <Footer showAlert={path !== personas.upgrade.route && path !== personas['work-play'].route} />
-        <MobileBar />
       </MotionConfig>
     </LazyMotion>
   );

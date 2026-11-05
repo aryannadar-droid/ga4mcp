@@ -8,7 +8,7 @@ import { Link } from '../lib/router';
 import { ArrowRight, CheckIcon } from '../components/Icons';
 import { SectionHeading } from '../components/SectionHeading';
 
-function choose(id: PersonaId, method: 'door' | 'quiz') {
+function choose(id: PersonaId, method: 'door' | 'quiz' | 'need_line') {
   savePersona(id);
   track('persona_select', { section: 'persona_doors', persona: id, method });
 }
@@ -32,6 +32,14 @@ export function PersonaDoors() {
             </m.li>
           ))}
         </m.ul>
+        {/* need-led line (persona A's built-in-graphics build) */}
+        <p className="mt-6 flex flex-wrap items-baseline gap-x-2 gap-y-1 text-lg">
+          <strong className="font-display font-semibold">{personasIntro.need.text}</strong>
+          <span className="text-muted">{personasIntro.need.detail}</span>
+          <Link href={personasIntro.need.href} className="link inline-flex items-center gap-1 font-semibold" onClick={() => choose('new-build', 'need_line')}>
+            {personasIntro.need.cta} <ArrowRight width={16} height={16} />
+          </Link>
+        </p>
         <Quiz />
       </div>
     </section>

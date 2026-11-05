@@ -359,13 +359,13 @@ function FitList({ fit }: { fit: ReturnType<typeof checkCaseFit> }) {
     <div className="mt-4 rounded-2xl border border-line bg-surface p-4 sm:p-5" aria-live="polite">
       <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
         <h3 className="font-display text-lg font-semibold">{caseFit.checkTitle}</h3>
-        <span className={`text-sm font-semibold ${fit.ok ? 'text-fg' : 'text-gold-soft'}`}>{fit.ok ? r.allGood : r.issues}</span>
+        <span className={`text-sm font-semibold ${fit.ok ? 'text-fg' : 'text-accent'}`}>{fit.ok ? r.allGood : r.issues}</span>
       </div>
       <ul className="mt-3 space-y-2 text-sm">
         {fit.lines.map((l) => (
           <li key={l.part} className="flex items-start gap-2.5">
             <span
-              className={`mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-full ${l.ok ? 'bg-accent text-ink' : 'border border-[#ff5a5a] text-[#ff7a7a]'}`}
+              className={`mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-full ${l.ok ? 'bg-accent text-ink' : 'border-2 border-accent text-accent'}`}
               aria-hidden
             >
               {l.ok ? <CheckIcon width={13} height={13} strokeWidth={3} /> : <CloseIcon width={12} height={12} strokeWidth={3} />}

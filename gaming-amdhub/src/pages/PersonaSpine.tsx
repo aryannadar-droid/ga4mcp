@@ -1,6 +1,7 @@
-import { useEffect, type ReactNode } from 'react';
+import { useEffect, useMemo, type ReactNode } from 'react';
 import { m } from 'framer-motion';
-import { personaPageCommon, personas, sellers, type PersonaId } from '../content';
+import { personaPageCommon, personas, sellers, type PersonaId, type ProductId } from '../content';
+import { BAR_SENTINEL_ID, useBarSections } from '../lib/bar';
 import { fadeUp } from '../lib/motion';
 import { getPersona, savePersona } from '../lib/persona';
 import { Link } from '../lib/router';
@@ -14,8 +15,13 @@ interface Props {
   sub: string;
   /** Blocks 1–3: the persona's answer. */
   answer: [ReactNode, ReactNode, ReactNode];
-  /** Product name passed to partner_click on the exit button. */
-  product: string;
+  /** Titles of blocks 1–3 (pinned-bar dropdown). */
+  blockTitles: string[];
+  /** Product the exit button links to (exact listing). */
+  product: ProductId;
+  /** partner_click context: upgrade path (B) or build id (A / C). */
+  path?: string;
+  build?: string;
   /** Block 6: the low-commitment step. */
   step: ReactNode;
 }
@@ -24,9 +30,19 @@ interface Props {
  * The six-block spine shared by every persona page:
  * 1–3 answer · 4 exit to a seller · 5 trust line · 6 low-commitment step.
  */
-export function PersonaSpine({ persona, eyebrow, title, sub, answer, product, step }: Props) {
+export function PersonaSpine({ persona, eyebrow, title, sub, answer, blockTitles, product, path, build, step }: Props) {
   const p = personas[persona];
   const primary = sellers.find((s) => s.id === p.sellers[0])!;
+
+  const barList = useMemo(
+    () => [
+      ...blockTitles.map((label, i) => ({ id: `step-${i + 1}`, label })),
+      { id: 'exit', label: personaPageCommon.barSections.exit },
+      { id: 'next-step', label: personaPageCommon.barSections.step },
+    ],
+    [blockTitles],
+  );
+  useBarSections(barList);
 
   // Landing here (from a door, the quiz or a shared link) counts as choosing this persona.
   useEffect(() => {
@@ -49,12 +65,14 @@ export function PersonaSpine({ persona, eyebrow, title, sub, answer, product, st
             {sub}
           </p>
         </header>
+        <div id={BAR_SENTINEL_ID} aria-hidden />
 
         <div className="mt-12 space-y-6">
           {answer.map((block, i) => (
             <m.section
               key={i}
-              aria-label={`Step ${i + 1}`}
+              id={`step-${i + 1}`}
+              aria-label={blockTitles[i] ?? `Step ${i + 1}`}
               className="card p-5 sm:p-8"
               variants={fadeUp}
               initial="hidden"
@@ -67,6 +85,7 @@ export function PersonaSpine({ persona, eyebrow, title, sub, answer, product, st
 
           {/* 4 · exit to a seller  +  5 · trust line */}
           <m.section
+            id="exit"
             aria-label="Where to buy"
             className="card relative overflow-hidden p-5 sm:p-8"
             variants={fadeUp}
@@ -82,7 +101,7 @@ export function PersonaSpine({ persona, eyebrow, title, sub, answer, product, st
                   <span>{p.trustLine}</span>
                 </p>
               </div>
-              <SellerLink href={primary.href} sellerName={primary.name} product={product} section={`persona_${persona}`} className="btn btn-primary min-h-12 px-6 text-base">
+              <SellerLink seller={primary.id} product={product} path={path} build={build} section={`persona_${persona}`} className="btn btn-primary min-h-12 px-6 text-base">
                 {personaPageCommon.exitPrefix} {primary.name}
                 <ExternalIcon width={18} height={18} />
               </SellerLink>
@@ -91,6 +110,7 @@ export function PersonaSpine({ persona, eyebrow, title, sub, answer, product, st
 
           {/* 6 · low-commitment step */}
           <m.section
+            id="next-step"
             aria-labelledby="step-title"
             className="rounded-2xl border border-dashed border-line p-5 sm:p-8"
             variants={fadeUp}

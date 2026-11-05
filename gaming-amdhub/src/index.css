@@ -181,24 +181,30 @@
   }
 }
 
+/*
+ * Reveals use fill-mode "backwards": the hidden state exists only while the animation runs.
+ * If animations are off or never start, the text is simply there.
+ */
 /* Block-level variant for page titles (keeps the element's own display). */
 .fade-reveal {
-  opacity: 0;
-  transform: translateY(16px);
-  animation: word-in 500ms var(--ease-out) forwards;
+  animation: fade-up-in 500ms var(--ease-out) backwards;
+}
+@keyframes fade-up-in {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
 }
 
 /* Headline word reveal — pure CSS so it never waits on JS motion libraries (protects LCP). */
 .word-reveal {
   display: inline-block;
-  opacity: 0;
-  transform: translateY(0.45em);
-  animation: word-in 560ms var(--ease-out) forwards;
+  animation: word-in 560ms var(--ease-out) backwards;
 }
 @keyframes word-in {
-  to {
-    opacity: 1;
-    transform: none;
+  from {
+    opacity: 0;
+    transform: translateY(0.45em);
   }
 }
 
@@ -240,15 +246,14 @@
   }
   .word-reveal,
   .fade-reveal {
-    animation: fade-in 200ms linear forwards !important;
-    transform: none;
+    animation: fade-in 200ms linear backwards !important;
   }
   .badge-gold::after {
     display: none;
   }
 }
 @keyframes fade-in {
-  to {
-    opacity: 1;
+  from {
+    opacity: 0;
   }
 }

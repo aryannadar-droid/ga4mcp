@@ -6,7 +6,7 @@ import { Wordmark } from './Wordmark';
 /** `showAlert` is off on persona pages whose step 6 already offers the sale alert. */
 export function Footer({ showAlert = true }: { showAlert?: boolean }) {
   return (
-    <footer className="relative mt-24 border-t border-line bg-surface/60 pb-28 md:pb-12">
+    <footer className="relative mt-24 border-t border-line bg-surface/60 pb-12">
       <div className="container-x grid gap-12 pt-14 lg:grid-cols-[1.1fr_1fr]">
         {showAlert ? (
         <section aria-labelledby="alert-title" id="alert" className="card p-6 sm:p-8">

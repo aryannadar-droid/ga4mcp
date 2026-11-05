@@ -107,7 +107,7 @@ export function makeFan(size: number, depth: number, glow: Color | null) {
   return g;
 }
 
-/** Tint every mesh under `root` red (part doesn't fit) or restore it. Materials are cloned once. */
+/** Flag every mesh under `root` with a strong orange glow (part doesn't fit: act on it), or restore it. Materials are cloned once. */
 export function setWarning(root: Object3D, on: boolean) {
   root.traverse((o) => {
     const mesh = o as Mesh;
@@ -118,7 +118,7 @@ export function setWarning(root: Object3D, on: boolean) {
       mesh.userData.warnCloned = true;
     }
     const mat = mesh.material as MeshStandardMaterial;
-    mat.emissive.set(on ? '#ff2b2b' : '#000000');
-    mat.emissiveIntensity = on ? 0.55 : 0;
+    mat.emissive.copy(on ? brandColors().orange : new Color('#000000'));
+    mat.emissiveIntensity = on ? 0.9 : 0;
   });
 }

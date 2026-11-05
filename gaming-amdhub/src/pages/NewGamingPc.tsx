@@ -1,35 +1,39 @@
 import { useState } from 'react';
-import { games, newBuildPage as c, personaPageCommon, type GameId } from '../content';
+import { builds, games, newBuildPage as c, personaPageCommon, type BuildId, type GameId } from '../content';
 import { track } from '../lib/analytics';
-import { formatFps, formatINR } from '../lib/format';
+import { formatFps } from '../lib/format';
 import { shareLink } from '../lib/share';
 import { writeStore } from '../lib/storage';
+import { BuildCard } from '../components/BuildCard';
 import { BookmarkIcon, CheckIcon, ShareIcon } from '../components/Icons';
+import { PlainKey } from '../components/PlainKey';
 import { BlockTitle, PersonaSpine } from './PersonaSpine';
 
 export default function NewGamingPc() {
-  const [budget, setBudget] = useState(c.budgets[1].id);
+  const [pick, setPick] = useState<BuildId>('a2');
   const [game, setGame] = useState<GameId>('valorant');
   const [status, setStatus] = useState<string | null>(null);
-  const pick = c.builds.find((b) => b.budgetId === budget) ?? c.builds[0];
+  const build = builds[pick];
+  const gameName = games.find((g) => g.id === game)?.name;
 
   const save = () => {
-    writeStore('amdhub.build', { persona: 'new-build', build: pick.id, budget, game });
-    track('build_save', { section: 'persona_new-build', product: pick.name, build: pick.id });
+    writeStore('amdhub.build', { persona: 'new-build', build: pick, game });
+    track('build_save', { section: 'persona_new-build', product: build.name, build: pick });
     setStatus(personaPageCommon.saved);
   };
   const share = async () => {
-    const r = await shareLink(`${personaPageCommon.shareText}: ${pick.name}`);
-    if (r !== 'failed') track('build_share', { section: 'persona_new-build', product: pick.name, method: r });
+    const r = await shareLink(`${personaPageCommon.shareText}: ${build.name}`);
+    if (r !== 'failed') track('build_share', { section: 'persona_new-build', product: build.name, build: pick, method: r });
     if (r === 'copied') setStatus(personaPageCommon.shared);
   };
 
   const block1 = (
     <>
-      <BlockTitle n={1}>{c.budgetLabel}</BlockTitle>
+      <BlockTitle n={1}>{c.blockTitles[0]}</BlockTitle>
+      <p className="mb-3 font-medium">{c.budgetLabel}</p>
       <div className="flex flex-wrap gap-2" role="group" aria-label={c.budgetLabel}>
         {c.budgets.map((b) => (
-          <button key={b.id} type="button" className="chip" aria-pressed={b.id === budget} onClick={() => setBudget(b.id)}>
+          <button key={b.id} type="button" className="chip" aria-pressed={b.id === pick} onClick={() => setPick(b.id)}>
             {b.label}
           </button>
         ))}
@@ -44,7 +48,7 @@ export default function NewGamingPc() {
             aria-pressed={g.id === game}
             onClick={() => {
               setGame(g.id);
-              track('game_check', { section: 'persona_new-build', game: g.id, resolution: '1080p', product: pick.name });
+              track('game_check', { section: 'persona_new-build', game: g.id, resolution: '1080p', product: build.name, build: pick });
             }}
           >
             {g.name}
@@ -56,39 +60,29 @@ export default function NewGamingPc() {
 
   const block2 = (
     <>
-      <BlockTitle n={2}>Three builds, priced</BlockTitle>
+      <BlockTitle n={2}>{c.blockTitles[1]}</BlockTitle>
       <ul className="grid gap-4 md:grid-cols-3">
-        {c.builds.map((b) => {
-          const active = b.id === pick.id;
+        {c.buildOrder.map((id) => {
+          const b = builds[id];
           return (
-            <li
-              key={b.id}
-              className={`relative rounded-2xl border p-5 transition-colors ${active ? 'border-accent bg-raised' : 'border-line'}`}
-            >
-              {active && <span className="mb-3 inline-block rounded-full bg-accent px-2.5 py-1 text-xs font-semibold text-ink">{c.recommended}</span>}
-              <h3 className="text-lg font-semibold">{b.name}</h3>
-              <p className="placeholder-val mt-1 font-display text-2xl font-semibold text-gold-soft">{formatINR(b.price)}</p>
-              <ul className="mt-4 space-y-1.5 text-sm text-muted">
-                {b.parts.map((part) => (
-                  <li key={part}>{part}</li>
-                ))}
-              </ul>
-              <p className="mt-4 border-t border-line pt-3 text-sm">
+            <li key={id}>
+              <BuildCard build={b} active={id === pick} tag={id === pick ? c.recommended : undefined}>
                 <span className="placeholder-val font-display text-xl font-semibold">{formatFps(b.fps[game]['1080p'])}</span> FPS{' '}
                 <span className="text-muted">
-                  in {games.find((g) => g.id === game)?.name} {c.fpsAt}
+                  in {gameName} {c.fpsAt}
                 </span>
-              </p>
+              </BuildCard>
             </li>
           );
         })}
       </ul>
+      <PlainKey className="mt-5" />
     </>
   );
 
   const block3 = (
     <>
-      <BlockTitle n={3}>{c.whyTitle}</BlockTitle>
+      <BlockTitle n={3}>{c.blockTitles[2]}</BlockTitle>
       <ul className="space-y-3">
         {c.why.map((line) => (
           <li key={line} className="flex gap-3">
@@ -107,7 +101,9 @@ export default function NewGamingPc() {
       title={c.title}
       sub={c.sub}
       answer={[block1, block2, block3]}
-      product={pick.parts[0]}
+      blockTitles={c.blockTitles}
+      product={build.cpu ?? 'r5-8600g'}
+      build={pick}
       step={
         <div className="flex flex-wrap items-center gap-3" aria-live="polite">
           <button type="button" className="btn btn-ghost" onClick={save}>
