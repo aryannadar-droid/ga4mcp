@@ -34,7 +34,7 @@ export const site = {
   nav: [
     { label: 'Processors', href: '/#products' },
     { label: 'Graphics', href: '/#graphics' },
-    { label: 'Build your PC', href: '/#build' },
+    { label: 'Build your PC', href: '/build-your-pc' },
     { label: 'Offers', href: '/#offers' },
   ],
   whereToBuy: 'Where to buy',
@@ -497,6 +497,7 @@ export const caseFit = {
   reset: 'Reset view',
   glass: 'Glass panel',
   loading: 'Loading 3D…',
+  show3d: 'Show in 3D',
   caseTitle: 'Your case',
   modes: { recommended: 'Recommended size', mine: 'My case' },
   /**
@@ -545,6 +546,125 @@ export const caseFit = {
     allGood: 'Everything fits',
     issues: 'Needs a bigger case, or smaller parts',
   },
+};
+
+/* ------------------------------------------------------------------ */
+/* Build-your-PC journey (homepage) + configurator (/build-your-pc)    */
+/* Pattern: story → 3D scene with a three-tab switch → one row per     */
+/* part → configurator with live 3D, Add / Remove cards, live total.   */
+/* ------------------------------------------------------------------ */
+
+export type JourneyTab = 'snap' | 'fit' | 'run';
+
+export const buildJourney = {
+  eyebrow: 'Build your PC',
+  statement: 'Snap. Check. Play.',
+  sub: 'Build an AMD PC part by part, see it in your case, then buy it from a verified seller.',
+  tabs: [
+    { id: 'snap' as JourneyTab, label: 'Snap it in', caption: 'Every part clicks into place. Swap one and the whole build updates.' },
+    { id: 'fit' as JourneyTab, label: 'Fit your case', caption: 'Tell us your case. We check the board, graphics card and cooler fit, to the millimetre.' },
+    { id: 'run' as JourneyTab, label: 'See it run', caption: `Switch it on: fans spin, the case glows, and you see the frames. ${PH} FPS in Valorant at 1080p. ${PH_SOURCE}` },
+  ],
+  tabsLabel: 'See the build',
+  fpsChip: `${PH} FPS · Valorant 1080p`,
+  cta: 'Configure now',
+  /** One row per part, alternating sides. `step` deep-links into the configurator. */
+  rows: [
+    {
+      id: 'cpu',
+      title: 'Processor',
+      line: 'Pick the chip that runs your games and your work. Built-in graphics or 3D V-Cache, it snaps into the same board.',
+      image: '/placeholders/cpu-ryzen-7-x3d.svg',
+      step: 'cfg-cpu',
+    },
+    {
+      id: 'gpu',
+      title: 'Graphics card',
+      line: 'The part that draws the game. Choose by video memory, or skip it and play on the 8600G’s built-in graphics.',
+      image: '/placeholders/gpu-rx-9070-xt.svg',
+      step: 'cfg-gpu',
+    },
+    {
+      id: 'case',
+      title: 'Case and cooling',
+      line: 'Use your own case or a recommended size. We check every part fits before you buy.',
+      image: '/placeholders/case-tower.svg',
+      step: 'cfg-case',
+    },
+  ],
+};
+
+export type ConfigSlot = 'cpu' | 'gpu' | 'board' | 'ram' | 'cooler' | 'psu';
+
+export interface ConfigOption {
+  id: string;
+  /** AMD product (links to exact listings); omitted for non-AMD parts. */
+  product?: ProductId;
+  label: string;
+  note: string;
+  price: Rupees;
+}
+
+export const configurator = {
+  route: '/build-your-pc',
+  eyebrow: 'Build your PC',
+  title: 'Your AMD build',
+  sub: 'Choose a case, then add parts. The 3D build updates as you go.',
+  totalLabel: 'Your build',
+  partsCount: 'parts',
+  startTitle: 'Start from a build',
+  startPresets: ['a1', 'a2', 'a3', 'c-pro', 'c-creator'] as BuildId[],
+  steps: {
+    case: { id: 'cfg-case', title: 'Select case' },
+    cpu: { id: 'cfg-cpu', title: 'Select processor' },
+    gpu: { id: 'cfg-gpu', title: 'Select graphics' },
+    extras: { id: 'cfg-extras', title: 'The rest of the build' },
+  },
+  caseCustom: 'My case',
+  cpus: [
+    { id: 'r5-8600g', product: 'r5-8600g' as ProductId, label: 'Ryzen 5 8600G', note: 'Graphics built in: play without a card', price: null as Rupees },
+    { id: 'r5-7500f', product: 'r5-7500f' as ProductId, label: 'Ryzen 5 7500F', note: 'No built-in graphics: add a card', price: null as Rupees },
+    { id: 'r9-9900x', product: 'r9-9900x' as ProductId, label: 'Ryzen 9 9900X', note: '12 cores for work and play', price: null as Rupees },
+    { id: 'r9-9950x3d', product: 'r9-9950x3d' as ProductId, label: 'Ryzen 9 9950X3D', note: '16 cores + 3D V-Cache', price: null as Rupees },
+  ] satisfies ConfigOption[],
+  /** Processors whose built-in graphics are meant for gaming. */
+  gamingIgpu: ['r5-8600g'],
+  gpus: [
+    { id: 'none', label: 'Built-in graphics', note: 'Uses the processor’s graphics. Add a card later.', price: null as Rupees },
+    { id: 'rx-9060xt-8', product: 'rx-9060xt-8' as ProductId, label: 'Radeon RX 9060 XT 8 GB', note: 'Smooth 1080p', price: null as Rupees },
+    { id: 'rx-9060xt-16', product: 'rx-9060xt-16' as ProductId, label: 'Radeon RX 9060 XT 16 GB', note: 'Double the video memory', price: null as Rupees },
+    { id: 'rx-9070', product: 'rx-9070' as ProductId, label: 'Radeon RX 9070', note: '16 GB for higher settings', price: null as Rupees },
+    { id: 'rx-9070xt', product: 'rx-9070xt' as ProductId, label: 'Radeon RX 9070 XT', note: '16 GB, our fastest here', price: null as Rupees },
+  ] satisfies ConfigOption[],
+  extras: [
+    { id: 'board', label: `AM5 motherboard ${PH}`, note: 'Holds every part', price: null as Rupees, required: true },
+    { id: 'ram', label: `${PH} GB DDR5 memory`, note: 'Two sticks', price: null as Rupees, required: true },
+    { id: 'cooler', label: `Tower cooler ${PH}`, note: `Optional if your processor’s box includes one. ${PH_SOURCE}`, price: null as Rupees, required: false },
+    { id: 'psu', label: `${PH} W power supply`, note: 'Powers the build', price: null as Rupees, required: true },
+  ],
+  add: 'Add',
+  remove: 'Remove',
+  selected: 'Selected',
+  needed: 'Needed',
+  unavailable: {
+    noIgpu: 'This processor needs a graphics card',
+    needsCard: 'Built-in graphics for gaming: Ryzen 5 8600G only',
+    noCard: 'Pick a graphics card or built-in graphics',
+  },
+  seeInAction: 'See it in action',
+  fitTitle: 'Fit check',
+  note: `Prices update when partner prices are added. Totals exclude the case. ${PH_SOURCE}`,
+  buyCta: 'Where to buy this build',
+  buyTitle: 'Buy your build',
+  buySub: 'AMD parts link straight to the product page at each seller. Or have an authorised builder put it together.',
+  builderCta: 'Get the whole build from an authorised builder',
+  share: 'Share build',
+  save: 'Save build',
+  saved: 'Saved on this device',
+  copied: 'Link copied',
+  close: 'Close',
+  customize: 'Customise in the builder',
+  viewerLabel: '3D view of your build',
 };
 
 /* ------------------------------------------------------------------ */

@@ -19,5 +19,8 @@ export function useBarSections(list: BarSection[]) {
   }, [list]);
 }
 
+/** When set (the configurator), the bar's "Where to buy" runs this instead of linking to the sellers. */
+export const barBuy = createStore<(() => void) | null>(null);
+
 /** Place right after the hero / page header: the bar appears once this passes the top. */
 export const BAR_SENTINEL_ID = 'bar-sentinel';

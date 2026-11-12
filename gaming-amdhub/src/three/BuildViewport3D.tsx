@@ -1,6 +1,6 @@
 import { useEffect, useRef, type KeyboardEvent, type MutableRefObject } from 'react';
-import { DirectionalLight, HemisphereLight, Vector3 } from 'three';
-import { buildTeaser, caseFit, type BoardSize } from '../content';
+import { DirectionalLight, HemisphereLight, MathUtils, Vector3 } from 'three';
+import { caseFit, type BoardSize } from '../content';
 import type { CaseDims, FitResult } from '../lib/caseFit';
 import { useReducedMotion } from '../hooks/useReducedMotion';
 import { brandColors } from './parts';
@@ -12,22 +12,35 @@ export interface ViewerApi {
   reset: () => void;
 }
 
+/** build: assembled, rear-left view · fit: square-on side view for sizes · run: fans spin, glow up */
+export type SceneMode = 'build' | 'fit' | 'run';
+
+export const PART_IDS: PartId[] = ['board', 'cpu', 'cooler', 'ram', 'gpu', 'psu'];
+
 interface Props {
   dims: CaseDims;
   board: BoardSize;
   fit: FitResult;
-  /** How many parts (in buildTeaser.parts order) are placed. */
-  shown: number;
+  /** Parts in the case. Newly present parts snap in; removed parts lift out. */
+  present: Record<PartId, boolean>;
+  gpuLabel: string;
+  psuLabel: string;
   glass: boolean;
+  mode?: SceneMode;
   /** Touch screens: rotation only after the visitor opts in, so the page still scrolls. */
   interactive: boolean;
   apiRef: MutableRefObject<ViewerApi | null>;
   onReady: () => void;
+  label?: string;
 }
 
 // rear-left, slightly above: front fans' glow and the card's label face the camera
-const VIEW_DIR = new Vector3(0.42, 0.26, 1).normalize();
-const order = buildTeaser.parts.map((p) => p.id as PartId);
+const VIEW: Record<SceneMode, { dir: Vector3; dist: number }> = {
+  build: { dir: new Vector3(0.42, 0.26, 1).normalize(), dist: 1 },
+  fit: { dir: new Vector3(0.04, 0.1, 1).normalize(), dist: 1.02 },
+  run: { dir: new Vector3(0.3, 0.12, 1).normalize(), dist: 0.86 },
+};
+const GLOW = { idle: 1.6, run: 4.2 };
 
 /** Case framing: distance that fits the whole case (+ guides) in view. */
 function frameDistance(d: CaseDims, fovDeg: number, aspect: number) {
@@ -39,12 +52,13 @@ function frameDistance(d: CaseDims, fovDeg: number, aspect: number) {
   return Math.max(fitV, fitH);
 }
 
-export default function BuildViewport3D({ dims, board, fit, shown, glass, interactive, apiRef, onReady }: Props) {
+export default function BuildViewport3D({ dims, board, fit, present, gpuLabel, psuLabel, glass, mode = 'build', interactive, apiRef, onReady, label }: Props) {
   const reduced = useReducedMotion();
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const stageRef = useRef<Stage | null>(null);
   const modelRef = useRef<PcModel | null>(null);
-  const shownRef = useRef(0); // parts already placed in the scene
+  const presentRef = useRef<Record<PartId, boolean> | null>(null); // what the scene currently shows
+  const modeRef = useRef<SceneMode>(mode);
   const distRef = useRef(0);
   const fine = typeof window !== 'undefined' && window.matchMedia('(pointer: fine)').matches;
 
@@ -70,16 +84,16 @@ export default function BuildViewport3D({ dims, board, fit, shown, glass, intera
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [reduced]);
 
-  /* (re)build the PC whenever the case or board changes — coalesced to one rebuild per frame */
+  /* (re)build the PC whenever the case, board or chosen parts' labels change — one rebuild per frame */
   useEffect(() => {
     const stage = stageRef.current;
     if (!stage) return;
     const raf = requestAnimationFrame(() => {
       const { orange } = brandColors();
-      const gpu = buildTeaser.parts.find((p) => p.id === 'gpu')?.label ?? '';
-      const psu = buildTeaser.parts.find((p) => p.id === 'psu')?.label ?? '';
-      const model = buildPc({ dims, board, sizes: caseFit.partSizes, fit, glass, orange, gpuLabel: gpu, psuLabel: psu, unit: caseFit.unit });
-      order.forEach((id, i) => (model.parts[id].visible = i < shownRef.current));
+      const model = buildPc({ dims, board, sizes: caseFit.partSizes, fit, glass, orange, gpuLabel, psuLabel, unit: caseFit.unit });
+      const shown = presentRef.current;
+      PART_IDS.forEach((id) => (model.parts[id].visible = !!shown?.[id]));
+      model.glow.intensity = modeRef.current === 'run' ? GLOW.run : GLOW.idle;
       if (modelRef.current) {
         stage.scene.remove(modelRef.current.container);
         disposeTree(modelRef.current.container);
@@ -91,8 +105,9 @@ export default function BuildViewport3D({ dims, board, fit, shown, glass, intera
       const { camera, controls } = stage;
       const dist = frameDistance(dims, camera.fov, camera.aspect || 1);
       const target = new Vector3(0, (dims.h * MM) / 2, 0);
-      const dir = distRef.current ? camera.position.clone().sub(controls.target).normalize() : VIEW_DIR.clone();
-      const ratio = distRef.current ? camera.position.distanceTo(controls.target) / distRef.current : 1;
+      const v = VIEW[modeRef.current];
+      const dir = distRef.current ? camera.position.clone().sub(controls.target).normalize() : v.dir.clone();
+      const ratio = distRef.current ? camera.position.distanceTo(controls.target) / distRef.current : v.dist;
       distRef.current = dist;
       controls.target.copy(target);
       controls.minDistance = dist * 0.4;
@@ -100,23 +115,81 @@ export default function BuildViewport3D({ dims, board, fit, shown, glass, intera
       camera.position.copy(target).add(dir.multiplyScalar(dist * ratio));
       camera.lookAt(target);
       stage.invalidate();
+      // a fresh model starts still: restart the spin if the build is running
+      if (modeRef.current === 'run') spin(stage);
     });
     return () => cancelAnimationFrame(raf);
-  }, [dims, board, fit, glass, reduced]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [dims, board, fit, glass, gpuLabel, psuLabel, reduced]);
 
-  /* snap newly added parts in: drop from above and out through the glass */
+  /* parts in / out: snap in from above and out through the glass; lift out the same way */
   useEffect(() => {
     const stage = stageRef.current;
     const model = modelRef.current;
-    const from = shownRef.current;
-    shownRef.current = shown;
+    const prev = presentRef.current;
+    presentRef.current = { ...present };
     if (!stage || !model) return;
-    for (let i = from; i < shown && i < order.length; i++) {
-      const g = model.parts[order[i]];
-      g.visible = true;
-      tween(stage, 520, (p) => g.position.set(0, (1 - p) * 140, (1 - p) * 260), reduced);
+    let delay = 0;
+    for (const id of PART_IDS) {
+      const was = !!prev?.[id];
+      const now = present[id];
+      if (was === now) continue;
+      const g = model.parts[id];
+      const start = delay;
+      delay += 140; // stagger when several parts change at once
+      const run = () => {
+        if (now) {
+          g.visible = true;
+          tween(stage, 520, (p) => g.position.set(0, (1 - p) * 140, (1 - p) * 260), reduced);
+        } else {
+          tween(stage, 360, (p) => {
+            g.position.set(0, p * 140, p * 260);
+            if (p >= 1) {
+              g.visible = false;
+              g.position.set(0, 0, 0);
+            }
+          }, reduced);
+        }
+      };
+      if (start && !reduced) window.setTimeout(run, start);
+      else run();
     }
-  }, [shown, reduced]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [PART_IDS.map((id) => (present[id] ? 1 : 0)).join(''), reduced]);
+
+  /* scene mode: fly the camera, brighten the glow and spin the fans while running */
+  useEffect(() => {
+    modeRef.current = mode;
+    const stage = stageRef.current;
+    const model = modelRef.current;
+    if (!stage || !model) return;
+    const { camera, controls } = stage;
+    const v = VIEW[mode];
+    const from = camera.position.clone().sub(controls.target);
+    const to = v.dir.clone().multiplyScalar(distRef.current * v.dist);
+    const g0 = model.glow.intensity;
+    const g1 = mode === 'run' ? GLOW.run : GLOW.idle;
+    tween(stage, 700, (p) => {
+      const off = from.clone().lerp(to, p).setLength(MathUtils.lerp(from.length(), to.length(), p));
+      camera.position.copy(controls.target).add(off);
+      camera.lookAt(controls.target);
+      if (modelRef.current) modelRef.current.glow.intensity = MathUtils.lerp(g0, g1, p);
+    }, reduced);
+    if (mode === 'run') spin(stage);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mode, reduced]);
+
+  /** Turn fan rotors while mode is "run". Under reduced motion fans stay still (glow only). */
+  function spin(stage: Stage) {
+    if (reduced) return;
+    const model = modelRef.current;
+    if (!model) return;
+    stage.addTick((dt) => {
+      if (modeRef.current !== 'run' || modelRef.current !== model) return false;
+      for (const r of model.rotors) r.rotation.z += dt * 9;
+      return true;
+    });
+  }
 
   /* glass toggle without a rebuild */
   useEffect(() => {
@@ -139,7 +212,8 @@ export default function BuildViewport3D({ dims, board, fit, shown, glass, intera
     reset: () => {
       const s = stageRef.current;
       if (!s) return;
-      s.camera.position.copy(s.controls.target).add(VIEW_DIR.clone().multiplyScalar(distRef.current));
+      const v = VIEW[modeRef.current];
+      s.camera.position.copy(s.controls.target).add(v.dir.clone().multiplyScalar(distRef.current * v.dist));
       s.invalidate();
     },
   };
@@ -166,7 +240,7 @@ export default function BuildViewport3D({ dims, board, fit, shown, glass, intera
     <div
       tabIndex={0}
       role="img"
-      aria-label={`${caseFit.viewerLabel}. ${dims.h} × ${dims.w} × ${dims.d} ${caseFit.unit}. Arrow keys rotate, plus and minus zoom.`}
+      aria-label={`${label ?? caseFit.viewerLabel}. ${dims.h} × ${dims.w} × ${dims.d} ${caseFit.unit}. Arrow keys rotate, plus and minus zoom.`}
       onKeyDown={onKey}
       className={`absolute inset-0 ${fine ? 'cursor-grab active:cursor-grabbing' : ''}`}
     >

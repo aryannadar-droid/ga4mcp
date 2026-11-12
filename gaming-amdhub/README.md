@@ -44,6 +44,9 @@ Deep links such as `/upgrade` need a SPA fallback on the host. `public/_redirect
 | `src/lib/scrollTracking.ts` | `scroll_depth` and `first_buy_visible` |
 | `src/components/SectionBar.tsx` | The pinned buy bar shown after the hero |
 | `src/components/BuildCard.tsx` | The four-line build card used on every page |
+| `src/pages/BuildYourPc.tsx` | The configurator (`/build-your-pc`) |
+| `src/components/BuildStage.tsx` | The 3D build stage shared by the homepage journey and the configurator (lazy three.js, toolbar, flat fallback) |
+| `src/lib/buildConfig.ts` | Configurator state: presets, compatibility rules, live total, share links |
 | `scripts/acceptance.cjs` | Acceptance checks (see *Quality bar*) |
 | `public/placeholders/` | Placeholder product SVGs, the ray-tracing Off / On pair (`rt-off.svg`, `rt-on.svg`) and `spec-sheet.pdf` |
 | `docs/screenshots/` | 390px and 1440px screenshots |
@@ -69,13 +72,42 @@ Deep links such as `/upgrade` need a SPA fallback on the host. `public/_redirect
    - **Pinning:** the bar card pins (ScrollTrigger, `start: 'bottom bottom'`, so the bars stay on screen on phones too). Scroll progress goes to a CSS variable and the bars derive `scaleX` from it, so scrolling doesn't re-render React.
    - **Loading:** the scene renders immediately with bars at full length; only GSAP is lazy, loading about a screen away.
    - **Placeholders:** each card shows a visible "Test source: [__], [date]" line. If FPS is `null`, the bar is a hatched "illustrative" fill and the label reads `[__]`.
-6. **Build your PC: 3D case.** A WebGL tower case with a glass side panel. Board, CPU, tower cooler, RAM, graphics card and PSU snap in one at a time while the running total (orange→gold gradient) and estimated FPS update. *Build yours* → `/new-gaming-pc`.
-   - **Case size:** *Recommended size* offers four presets (Mini-ITX, Micro-ATX, Mid-tower marked Recommended, Full tower). *My case* has height, width and depth sliders plus number boxes in mm. The case reshapes live, re-frames the camera, and shows measuring lines with mm labels.
-   - **Motherboard size:** ATX, Micro-ATX or Mini-ITX (standard form-factor sizes).
-   - **Fit check:** motherboard, graphics-card length and cooler height, each with the mm of room to spare or overrun. Parts that don't fit glow orange ("act") in 3D where they collide with the case. The page uses only the orange / black / gold tokens.
-   - **Controls:** drag to rotate (on touch screens, tap *Rotate in 3D* first so the page still scrolls; pinch zooms after that), + / − / reset buttons, arrow keys, and a glass-panel toggle.
-   - **Performance:** renders only on change and pauses off-screen. Under reduced motion parts appear in place with no damping. Without WebGL it falls back to the flat SVG build.
-   - **Loading:** three.js (~152 KB gzip) loads when the section is about a screen away.
+6. **Build your PC: the journey** (modelled on a modular-product launch page: story → 3D scene with a three-tab switch → one row per part → configurator).
+   - **Statement:** "Snap. Check. Play." with one supporting line.
+   - **3D scene with a three-tab switch** below it, each tab with a one-line caption:
+     - *Snap it in*: the parts click into the case one by one.
+     - *Fit your case*: the case tours Mini-ITX → Micro-ATX → Mid-tower while the fit check updates live; parts that don't fit glow orange.
+     - *See it run*: fans spin, the case glow brightens, and an FPS chip shows `[__] FPS`.
+   - **One row per part** (processor, graphics card, case and cooling), alternating sides on desktop and compact rows on phones. Each *Configure now* opens the configurator at that step.
+
+### Configurator: `/build-your-pc`
+
+The page you reach from *Configure now*, the *Build your PC* nav link, or *Customise in the builder* on the A and C build cards (which opens with that build's parts).
+
+- **Live 3D build:**
+  - **Desktop:** sticky on the left.
+  - **Phones:** sticky at the top, about a third of the screen, so you watch it change while you scroll the options.
+  - **See it in action:** a toggle that spins the fans, raises the glow and shows the FPS chip.
+  - **Controls:** glass-panel toggle, zoom and reset; drag to rotate (on touch screens, tap *Rotate in 3D* first).
+- **Start from a build:** chips for Starter, Smooth 1080p, Ready for more, Professional and Creator.
+- **01 Select case:** four recommended sizes or *My case* (height, width and depth in mm), plus motherboard size. Like choosing a dock, this decides what fits; the fit check (board, card length, cooler height) updates live.
+- **02 Select processor** and **03 Select graphics:** cards with a thumbnail, `₹[__]` price, one line and an Add / Selected pill.
+  - "Built-in graphics" is only available with the Ryzen 5 8600G; other processors grey it out with the reason.
+  - Picking the 7500F while on built-in graphics adds the entry graphics card and says so.
+- **04 The rest of the build:** board, memory and power supply are marked *Needed*; the cooler can be added or removed. Each change snaps the part into, or lifts it out of, the 3D case. The plain-words key sits under this step.
+- **Live total:** `₹[__]` and the part count. It turns into a real sum once every chosen part has a price in `content.ts`.
+  - **Desktop:** on the *Where to buy this build* button.
+  - **Phones:** in a bar pinned to the bottom.
+- **Buy sheet:** each chosen AMD part links to its exact listing at Amazon, Flipkart and the specialist e-tailer, or the whole build goes to an authorised builder. All links are UTM-tagged with `build: custom`. On this page the pinned bar's *Where to buy* opens the same sheet, so the build isn't lost.
+- **Save / Share:** the share link stores the whole build in the URL (`?cpu=…&gpu=…&case=…&b=…&dims=…&x=…`), and opening it restores the build.
+
+### 3D on every device (both 3D views)
+
+- three.js (~152 KB gzip) loads only when needed: the homepage scene loads about a screen before you reach it, and on the configurator it starts once the browser is idle. Until then the flat SVG build shows.
+- Rendering happens only when something changes, and pauses off-screen.
+- Under reduced motion, parts appear in place, the fans don't spin and there's no damping.
+- **Devices without graphics hardware for WebGL** (software renderers such as SwiftShader or llvmpipe) keep the flat drawing and get a *Show in 3D* button. On such a device the scene would block the page for seconds. Add `?3d=1` to any URL to force 3D for testing.
+- Without WebGL at all, the flat SVG build is the fallback.
 7. **Verified sellers.** Exactly four named sellers as text (no logo wall): Amazon and Flipkart (persona A line), a specialist e-tailer (B) and an authorised builder (C).
    - A "Show sellers for" picker chooses the product. Every link goes to **that product's exact listing**, never a search page, and carries `utm_source=amdhub&utm_medium=referral&utm_campaign=[persona]`.
    - If a persona is saved, its seller(s) and trust line move to the front.
@@ -162,6 +194,8 @@ Placeholder conventions: a price or FPS of `null` renders as `₹[__]` or `[__]`
 | `newBuildPage` | `why[*]` claims |
 | `upgradePage` | `biosQ` / `biosResults` (BIOS version), `coolerResults`, `cards[*].recommendedPsuW` and `lengthMm`, `results.*`, `beforeAfter`, `beforeAfterSource`, `stock[*]` |
 | `chip3d` | Viewer copy; `engraving` (brand, line, model) printed on the 3D heat spreader |
+| `buildJourney` | Statement, tab captions, FPS chip, part rows |
+| `configurator` | Option labels and notes, `cpus[*].price`, `gpus[*].price`, `extras[*].price` (all `null` → `₹[__]`), `gamingIgpu`, copy |
 | `caseFit` | `presets` (typical sizes: **replace with the recommended case spec**), `recommendedId`, slider ranges in `dims`, `boards`, `partSizes` (GPU length, cooler height: **replace with exact model specs**), `clearance` rules used by the fit check, result copy |
 | `buildTeaser.parts` | Order is the 3D snap-in order; ids map to 3D models (`board`, `cpu`, `cooler`, `ram`, `gpu`, `psu`) |
 | `workPlayPage` | `match`, `workNotes`, `compare.rows[*].values`, `compare.nvidiaPrices` (list + street, each dated), `compare.source`, `compare.date`; replace `/public/placeholders/spec-sheet.pdf` |
@@ -188,10 +222,11 @@ Every push has `event`, `persona` (the saved persona, or `none`) and `section`. 
 | `bundle_redeem_click` | Offer chip | `product: bundle`, `link_url` |
 | `builder_start` | *Start building* (hero), *Build yours* (teaser) | — |
 | `view_3d` *(added)* | *View in 3D* on the hero chip | `product: chip` |
+| `build_configure` *(added)* | Any part choice in the configurator | `part`, `product`, `action` (`select` / `add` / `remove`) |
 | `scroll_depth` | Scroll passes 10 / 25 / 50 / 75 / 90 % of the page (percent, not screens or pixels), once each per page view | `percent`, `page` |
 | `first_buy_visible` | The first *Where to buy* button enters the viewport, once per page view | `scroll_percent` at that moment, `section` (which button), `page` |
 
-`compat_check` also fires from the 3D case section (`section: build_3d`), 0.9 s after the visitor stops adjusting. It sends `case_mode`, `case_h`, `case_w`, `case_d`, `board` and `result`.
+`compat_check` also fires from the configurator's case step (`section: configurator`), 0.9 s after the visitor stops adjusting. It sends `case`, `case_h`, `case_w`, `case_d`, `board` and `result`. In the configurator, `builder_start` comes from *Configure now* and *Customise in the builder*, `store_search` from opening the buy sheet, and `build_save` / `build_share` from its save and share buttons, all with `build: custom`.
 
 North-star KPI: `partner_click` events per 100 sessions.
 
@@ -228,6 +263,9 @@ Lighthouse 12, mobile, simulated 4G:
 | `/new-gaming-pc` | 98 | 100 | 100 | 2.0 s | 40 ms | 0 |
 | `/upgrade` | 98 | 100 | 100 | 2.0 s | 20 ms | 0 |
 | `/work-and-play` | 99 | 100 | 100 | 2.0 s | 20 ms | 0 |
+| `/build-your-pc` | 99 | 100 | 100 | 1.8 s | 60 ms | 0 |
+
+Lighthouse's Chrome has no GPU, so the configurator shows its flat drawing there (see *3D on every device*). Forcing 3D on that GPU-less machine (`?3d=1`) gives LCP 1.8 s and TBT about 4.9 s. The blocking time is software drawing of each frame, which a phone's GPU does in hardware.
 
 - **Initial JS:** about 129 KB gzip (React + app ≈ 98 KB, motion ≈ 31 KB). The FPS scene and persona pages are now in the main bundle so content never waits on a chunk. Loaded later:
   - three.js + 3D models (≈ 160 KB), only near the build section or on *View in 3D*
@@ -246,5 +284,7 @@ Lighthouse 12, mobile, simulated 4G:
 - `home-fps-pinned-*.png`: the FPS scene mid-race, while pinned
 - `chip3d-*.png`, `chip3d-flip-*.png`: the 3D chip viewer, top and contacts
 - `build3d-*.png`: the 3D case with the recommended mid-tower
-- `build3d-mycase-*.png`, `build3d-nofit-1440.png`: a custom case too small for the parts, with the failing parts glowing orange
+- `build3d-mycase-*.png`, `build3d-nofit-1440.png`: a custom case too small for the parts, with the failing parts glowing orange (earlier layout)
+- `journey-snap-*.png`, `journey-fit-*.png`, `journey-run-1440.png`, `journey-rows-390.png`: the homepage Build-your-PC journey
+- `configurator-*.png`: the configurator on desktop and phone, the parts list, and the buy sheet
 - `phone-*.png` (390 × 844): pinned bar over the product strip, RT slider, FPS tabs, sellers, B1 and B3 paths, C matched build and comparison, A build cards

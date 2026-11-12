@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
 import { AnimatePresence, m } from 'framer-motion';
 import { personas, sectionBar } from '../content';
-import { BAR_SENTINEL_ID, barActive, barSections } from '../lib/bar';
+import { BAR_SENTINEL_ID, barActive, barBuy, barSections } from '../lib/bar';
+import { StoreIcon } from './Icons';
 import { DUR, EASE } from '../lib/motion';
 import { usePersona } from '../lib/persona';
 import { Link, navigate, usePath } from '../lib/router';
@@ -20,6 +21,7 @@ export function SectionBar() {
   const path = usePath();
   const active = barActive.use();
   const sections = barSections.use();
+  const buy = barBuy.use();
   const persona = usePersona();
   const p = persona ? personas[persona] : null;
   const [current, setCurrent] = useState('');
@@ -120,7 +122,14 @@ export function SectionBar() {
                 <ArrowRight width={14} height={14} className="shrink-0" />
               </Link>
             )}
-            <WhereToBuy section="section_bar" className="btn btn-primary ml-auto min-h-10 shrink-0 px-4 text-sm" label={sectionBar.whereToBuy} />
+            {buy ? (
+              <button type="button" data-buy="where-to-buy" data-buy-section="section_bar" className="btn btn-primary ml-auto min-h-10 shrink-0 px-4 text-sm" onClick={buy}>
+                <StoreIcon width={18} height={18} />
+                {sectionBar.whereToBuy}
+              </button>
+            ) : (
+              <WhereToBuy section="section_bar" className="btn btn-primary ml-auto min-h-10 shrink-0 px-4 text-sm" label={sectionBar.whereToBuy} />
+            )}
           </nav>
         </m.div>
       )}

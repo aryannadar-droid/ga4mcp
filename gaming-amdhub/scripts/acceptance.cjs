@@ -17,7 +17,7 @@ const buyInView = (p) => p.evaluate(() => [...document.querySelectorAll('[data-b
   const b = await chromium.launch();
 
   // 1. Where to buy visible on load and after the hero, all the way down (390 × 844)
-  for (const route of ['/', '/new-gaming-pc', '/upgrade', '/work-and-play']) {
+  for (const route of ['/', '/new-gaming-pc', '/upgrade', '/work-and-play', '/build-your-pc']) {
     const p = await b.newPage({ viewport: { width: 390, height: 844 } });
     await p.goto(BASE + route, { waitUntil: 'networkidle' });
     ok(await buyInView(p), `${route}: Where to buy visible on load at 390x844`);
@@ -48,6 +48,12 @@ const buyInView = (p) => p.evaluate(() => [...document.querySelectorAll('[data-b
   await p.goto(BASE + '/upgrade', { waitUntil: 'networkidle' }); await grab();
   for (const pl of ['AMD AM4', 'AMD AM5', 'Intel']) { await p.click(`button:has-text("${pl}")`); await grab(); }
   await p.goto(BASE + '/work-and-play', { waitUntil: 'networkidle' }); await grab();
+  await p.goto(BASE + '/build-your-pc', { waitUntil: 'networkidle' });
+  for (const cpu of ['Ryzen 5 8600G', 'Ryzen 9 9950X3D']) {
+    await p.click(`#cfg-cpu button:has-text("${cpu}")`);
+    await p.click('#cfg-buy button[data-buy]'); await grab();
+    await p.keyboard.press('Escape');
+  }
   const sellerLinks = [...links].filter((h) => /amazon|flipkart|specialist|builder/.test(h));
   const searchy = sellerLinks.filter((h) => /\/s\?|search|[?&]q=|[?&]k=/.test(h));
   const noUtm = sellerLinks.filter((h) => !/utm_source=amdhub&utm_medium=referral&utm_campaign=/.test(h));
@@ -57,7 +63,7 @@ const buyInView = (p) => p.evaluate(() => [...document.querySelectorAll('[data-b
   await p.close();
 
   // 3. Content visible with scroll animations never running (IntersectionObserver stubbed out)
-  for (const [route, w] of [['/', 390], ['/', 1440], ['/new-gaming-pc', 390], ['/upgrade', 390], ['/work-and-play', 390]]) {
+  for (const [route, w] of [['/', 390], ['/', 1440], ['/new-gaming-pc', 390], ['/upgrade', 390], ['/work-and-play', 390], ['/build-your-pc', 390], ['/build-your-pc', 1440]]) {
     const ctx = await b.newContext({ viewport: { width: w, height: 900 } });
     await ctx.addInitScript(() => { window.IntersectionObserver = class { observe() {} unobserve() {} disconnect() {} takeRecords() { return []; } }; });
     const q = await ctx.newPage();

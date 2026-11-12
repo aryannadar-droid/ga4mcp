@@ -17,7 +17,9 @@ export type EventName =
   | 'view_3d'
   /* Added in the phone-first revision. */
   | 'scroll_depth'
-  | 'first_buy_visible';
+  | 'first_buy_visible'
+  /* Added with the configurator. */
+  | 'build_configure';
 
 export interface EventParams {
   section: string;

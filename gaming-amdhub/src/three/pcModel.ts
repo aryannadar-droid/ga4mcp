@@ -53,6 +53,10 @@ export interface PcModel {
   container: Group;
   root: Group;
   parts: Record<PartId, Group>;
+  /** Interior orange light: brightens when the build "runs". */
+  glow: PointLight;
+  /** Fan rotors (userData.spin) to turn when the build runs. */
+  rotors: Object3D[];
   glass: Object3D;
 }
 
@@ -327,5 +331,7 @@ export function buildPc(p: PcParams): PcModel {
 
   const container = new Group();
   container.add(root, lights);
-  return { container, root, parts, glass };
+  const rotors: Object3D[] = [];
+  root.traverse((o) => o.userData.spin && rotors.push(o));
+  return { container, root, parts, glass, glow, rotors };
 }

@@ -66,7 +66,7 @@ export default function NewGamingPc() {
           const b = builds[id];
           return (
             <li key={id}>
-              <BuildCard build={b} active={id === pick} tag={id === pick ? c.recommended : undefined}>
+              <BuildCard build={b} active={id === pick} tag={id === pick ? c.recommended : undefined} customize>
                 <span className="placeholder-val font-display text-xl font-semibold">{formatFps(b.fps[game]['1080p'])}</span> FPS{' '}
                 <span className="text-muted">
                   in {gameName} {c.fpsAt}

@@ -46,7 +46,8 @@ export function createStage(canvas: HTMLCanvasElement, opts: { reduced: boolean;
 
   const scene = new Scene();
   const pmrem = new PMREMGenerator(renderer);
-  const envTarget = pmrem.fromScene(new RoomEnvironment(), 0.04);
+  // 64px is plenty for soft studio reflections and ~16x cheaper than the 256px default
+  const envTarget = pmrem.fromScene(new RoomEnvironment(), 0.04, 0.1, 100, { size: 64 });
   scene.environment = envTarget.texture;
   scene.environmentIntensity = 0.55;
   pmrem.dispose();

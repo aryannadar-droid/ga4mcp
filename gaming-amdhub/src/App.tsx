@@ -1,6 +1,6 @@
 import { lazy, Suspense, useEffect } from 'react';
 import { domAnimation, LazyMotion, MotionConfig } from 'framer-motion';
-import { personas, site } from './content';
+import { configurator, personas, site } from './content';
 import { useHashScroll, usePath } from './lib/router';
 import { setLenis } from './lib/scroll';
 import { useScrollTracking } from './lib/scrollTracking';
@@ -15,6 +15,7 @@ import Home from './pages/Home';
 import NewGamingPc from './pages/NewGamingPc';
 import Upgrade from './pages/Upgrade';
 import WorkAndPlay from './pages/WorkAndPlay';
+import BuildYourPc from './pages/BuildYourPc';
 const NotFound = lazy(() => import('./pages/NotFound'));
 
 const routes: Record<string, React.ComponentType> = {
@@ -22,6 +23,7 @@ const routes: Record<string, React.ComponentType> = {
   [personas['new-build'].route]: NewGamingPc,
   [personas.upgrade.route]: Upgrade,
   [personas['work-play'].route]: WorkAndPlay,
+  [configurator.route]: BuildYourPc,
 };
 
 /** Lenis smooth scroll — loaded after first paint, never under prefers-reduced-motion. */

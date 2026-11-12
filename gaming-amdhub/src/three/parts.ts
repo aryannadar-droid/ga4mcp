@@ -89,6 +89,10 @@ export function makeFan(size: number, depth: number, glow: Color | null) {
   const hub = new Mesh(new CylinderGeometry(size * 0.17, size * 0.17, depth * 0.7, 28), frameMat);
   hub.rotation.x = Math.PI / 2;
   g.add(hub);
+  // blades sit on a rotor the viewer can spin ("See it run")
+  const rotor = new Group();
+  rotor.userData.spin = true;
+  g.add(rotor);
   const blades = 7;
   for (let i = 0; i < blades; i++) {
     const pivot = new Group();
@@ -97,7 +101,7 @@ export function makeFan(size: number, depth: number, glow: Color | null) {
     blade.rotation.x = 0.55; // pitch
     pivot.add(blade);
     pivot.rotation.z = (i / blades) * Math.PI * 2;
-    g.add(pivot);
+    rotor.add(pivot);
   }
   if (glow) {
     const ring = new Mesh(new TorusGeometry(size * 0.44, size * 0.012, 8, 64), new MeshBasicMaterial({ color: glow }));

@@ -1,5 +1,8 @@
 import type { ReactNode } from 'react';
-import { buildCardLabels as L, catalog, type Build } from '../content';
+import { buildCardLabels as L, catalog, configurator, type Build } from '../content';
+import { track } from '../lib/analytics';
+import { openBuilder } from '../lib/buildConfig';
+import { ArrowRight } from './Icons';
 import { formatINR } from '../lib/format';
 
 interface Props {
@@ -9,13 +12,15 @@ interface Props {
   tag?: string;
   /** Extra line under the four (FPS for the chosen game, work note…). */
   children?: ReactNode;
+  /** Show "Customise in the builder", opening the configurator with this build. */
+  customize?: boolean;
 }
 
 /**
  * Every build card, everywhere, shows the same four lines:
  * specs · what the parts do in plain words · good for · what changes vs the build before.
  */
-export function BuildCard({ build: b, active = false, tag, children }: Props) {
+export function BuildCard({ build: b, active = false, tag, children, customize = false }: Props) {
   const cpu = b.cpu ? `${catalog[b.cpu].name} · ${catalog[b.cpu].specs}` : b.cpuText;
   const gpu = b.gpu ? `${catalog[b.gpu].name}${catalog[b.gpu].name.includes('GB') ? '' : ` · ${catalog[b.gpu].specs}`}` : b.gpuText;
   return (
@@ -51,6 +56,18 @@ export function BuildCard({ build: b, active = false, tag, children }: Props) {
         </div>
       </dl>
       {children && <div className="mt-auto border-t border-line pt-3 text-sm">{children}</div>}
+      {customize && (
+        <button
+          type="button"
+          className="link mt-3 inline-flex items-center gap-1 self-start text-sm font-semibold"
+          onClick={() => {
+            track('builder_start', { section: 'build_card', build: b.id });
+            openBuilder({ build: b.id });
+          }}
+        >
+          {configurator.customize} <ArrowRight width={14} height={14} />
+        </button>
+      )}
     </article>
   );
 }

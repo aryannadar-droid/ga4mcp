@@ -94,7 +94,7 @@ export default function WorkAndPlay() {
       {shown ? (
         <div aria-live="polite">
           <div className="grid gap-4 md:grid-cols-2">
-            <BuildCard build={builds[current]} active tag={c.matchedTag}>
+            <BuildCard build={builds[current]} active tag={c.matchedTag} customize>
               {work && <span>{c.workNotes[work]}</span>}
             </BuildCard>
             {showOther && <BuildCard build={builds[other]} />}
