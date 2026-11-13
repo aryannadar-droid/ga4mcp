@@ -1,0 +1,105 @@
+/*
+ * NEW_HOME_V2 look and feel, scoped to .v2 so nothing locked changes.
+ * ~70% black base · orange = the one action per screen · gold = proof, numbers, premium
+ * light gold = glows and gradients · off-white text.
+ */
+.v2 {
+  --v2-black: #07080a;
+  --v2-black-2: #0f1013;
+  --v2-line: #23242a;
+  --v2-orange: #ff6a13;
+  --v2-orange-deep: #e5530a;
+  --v2-gold: #d4a64a;
+  --v2-gold-soft: #f2d58a;
+  --v2-text: #f3f1ec;
+  --v2-muted: #a8a59e;
+  background: var(--v2-black);
+  color: var(--v2-text);
+}
+
+.v2-display {
+  font-family: 'Space Grotesk', ui-sans-serif, system-ui, sans-serif;
+  font-weight: 700;
+  letter-spacing: -0.035em;
+  line-height: 0.95;
+  text-wrap: balance;
+}
+
+/* Orange: the single action on a screen. Black text on orange keeps 6.8:1 contrast. */
+.v2-btn-act {
+  background: var(--v2-orange);
+  color: var(--v2-black);
+}
+.v2-btn-act:hover {
+  background: var(--v2-orange-deep);
+}
+.v2-btn-quiet {
+  border: 1px solid color-mix(in srgb, var(--v2-text) 35%, transparent);
+  color: var(--v2-text);
+  background: transparent;
+}
+.v2-btn-quiet:hover {
+  border-color: var(--v2-text);
+}
+
+/* Big thumb-friendly chips for the game check (≥ 48px tall). */
+.v2-chip {
+  display: inline-flex;
+  min-height: 48px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  border: 1px solid var(--v2-line);
+  padding: 0 18px;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--v2-text);
+  transition:
+    background-color 200ms var(--ease-out),
+    border-color 200ms var(--ease-out);
+}
+.v2-chip[aria-pressed='true'],
+.v2-chip[aria-checked='true'] {
+  background: color-mix(in srgb, var(--v2-gold) 16%, var(--v2-black));
+  border-color: var(--v2-gold);
+  color: var(--v2-gold-soft);
+}
+
+/* Floating hero tags drift a few pixels (transform only); they stand still under reduced motion. */
+@keyframes v2-float {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-6px);
+  }
+}
+.v2-float {
+  animation: v2-float 6s ease-in-out 2;
+}
+@keyframes v2-glow {
+  0%,
+  100% {
+    opacity: 0.65;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+.v2-glow {
+  animation: v2-glow 5s ease-in-out 3;
+}
+@media (prefers-reduced-motion: reduce) {
+  .v2-float,
+  .v2-glow {
+    animation: none;
+  }
+}
+
+/* Room for the phone action bar below the footer. */
+@media (max-width: 767.98px) {
+  body.v2-has-bar {
+    padding-bottom: calc(76px + env(safe-area-inset-bottom));
+  }
+}

@@ -6,13 +6,13 @@ import { viteSingleFile } from 'vite-plugin-singlefile';
 
 /** Single-file build: swap '/placeholders/…' paths in source for data URIs. */
 function inlinePlaceholders(): Plugin {
-  const types: Record<string, string> = { svg: 'image/svg+xml', pdf: 'application/pdf' };
+  const types: Record<string, string> = { svg: 'image/svg+xml', pdf: 'application/pdf', webm: 'video/webm', mp4: 'video/mp4' };
   return {
     name: 'inline-placeholders',
     enforce: 'pre',
     transform(code, id) {
       if (!id.includes('/src/') || !code.includes('/placeholders/')) return;
-      return code.replace(/(['"`])\/placeholders\/([\w.-]+)\.(svg|pdf)\1/g, (_m, q, name, ext) => {
+      return code.replace(/(['"`])\/placeholders\/([\w.-]+)\.(svg|pdf|webm|mp4)\1/g, (_m, q, name, ext) => {
         const data = readFileSync(new URL(`./public/placeholders/${name}.${ext}`, import.meta.url)).toString('base64');
         return `${q}data:${types[ext]};base64,${data}${q}`;
       });
