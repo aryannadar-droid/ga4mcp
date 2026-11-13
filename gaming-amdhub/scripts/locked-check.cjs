@@ -42,8 +42,16 @@ const ok = (cond, msg) => {
     /* ---------- homepage ---------- */
     await p.goto(BASE + '/', { waitUntil: 'networkidle' });
     ok(await visible('header [data-buy="where-to-buy"]'), t('header Where to buy visible on load'));
-    ok((await p.textContent('#hero-title'))?.includes('The fastest gaming processors'), t('locked hero headline'));
-    ok(await visible('text=Start building'), t('hero Start building'));
+    // NEW_HOME_V2 on: the hero, doors and sellers are merged into the new design, so each
+    // original feature is checked in its merged home (see CHANGES.md).
+    const v2 = (await count('[data-layer="home-v2"]')) > 0;
+    if (v2) {
+      ok((await p.textContent('#v2-hero-title'))?.includes('You already play on AMD'), t('merged hero headline'));
+      ok(await visible('[aria-labelledby="v2-hero-title"] a[href="#src-hero-claim"]'), t('merged hero keeps the claim footnote'));
+    } else {
+      ok((await p.textContent('#hero-title'))?.includes('The fastest gaming processors'), t('locked hero headline'));
+      ok(await visible('text=Start building'), t('hero Start building'));
+    }
     ok(await visible('#offers'), t('offer chip'));
     await p.click('button:has-text("View in 3D")');
     ok(await p.waitForSelector('dialog[open]', { timeout: 8000 }).then(() => true).catch(() => false), t('View in 3D opens the chip viewer'));
@@ -75,9 +83,13 @@ const ok = (cond, msg) => {
     ok((await p.inputValue('#sellers select')) === 'r7-5700x3d', t('View sellers picks the product in Sellers'));
     const sellerHrefs = await p.$$eval('#sellers a[target=_blank]', (as) => as.map((a) => a.href));
     ok(sellerHrefs.length === 4 && sellerHrefs.every((h) => h.includes('utm_source=amdhub') && !/search|\/s\?/.test(h)), t('seller links exact + UTM'));
-    // Start building (builder_start) → doors; door click → persona page
+    // builder_start (Start building, or Configure now in the merged layout) → doors; door click → persona page
     await p.goto(BASE + '/', { waitUntil: 'networkidle' });
-    await p.click('text=Start building');
+    if (v2) {
+      await p.click('#build li button:has-text("Configure now") >> nth=0');
+      await p.waitForTimeout(800);
+      await p.goto(BASE + '/#doors', { waitUntil: 'networkidle' });
+    } else await p.click('text=Start building');
     await p.waitForTimeout(1200);
     await p.click('#doors a[href="/upgrade"]');
     await p.waitForTimeout(600);

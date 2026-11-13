@@ -31,7 +31,8 @@ const buyInView = (p) => p.evaluate(() => [...document.querySelectorAll('[data-b
     ok(await p.evaluate(() => !!document.querySelector('nav[aria-label="Page sections"] [data-buy="where-to-buy"]')), `${route}: pinned bar (section dropdown + Where to buy) is showing after the hero`);
     if (route === '/') {
       await p.goto(BASE + '/', { waitUntil: 'networkidle' });
-      await p.click('text=Start building'); await p.waitForTimeout(1500);
+      // anchor jump past the hero: "Start building", or "Will my game run?" in the NEW_HOME_V2 hero
+      await p.click((await p.$('#v2-hero-cta')) ? '#v2-hero-cta' : 'text=Start building'); await p.waitForTimeout(1500);
       ok(await p.evaluate(() => !!document.querySelector('nav[aria-label="Page sections"]')) && (await buyInView(p)), `/: bar shows after an anchor jump past the hero`);
     }
     await p.close();

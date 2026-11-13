@@ -42,6 +42,15 @@ const ok = (c, m) => (c ? passes++ : (fails.push(m), console.log('FAIL ' + m)));
     ok(!/₹|buy now/i.test(heroText) && !(await p.$(hero + ' img')), t('no prices, Buy Now or product boxes in the new hero'));
     ok((await p.$$(hero + ' li')).length === 3, t('three floating tags'));
 
+    // merged sections: no repeats of the old design, and each merged section keeps the old features
+    ok((await p.$$('#hero-title')).length === 0 && (await p.$$('h1')).length === 1, t('one hero only (old hero merged)'));
+    ok((await p.$$eval('h2', (hs) => hs.filter((h) => /What are you building\?/.test(h.textContent)).length)) === 1, t('one "What are you building?" (old doors merged)'));
+    ok((await p.$$('#sellers')).length === 1 && (await p.$$('#doors')).length === 1, t('one #sellers and one #doors anchor'));
+    ok((await p.$$(hero + ' #offers')).length === 1 && (await p.$$(hero + ' a[href="#src-hero-claim"]')).length === 1, t('merged hero: offer chip + claim footnote'));
+    ok((await p.$$(hero + ' button:has-text("View in 3D")')).length === 1, t('merged hero: View in 3D'));
+    ok((await p.locator('#doors >> text=Play games without a graphics card.').count()) === 1 && (await p.$$('#doors button:has-text("Not sure? Answer two questions")')).length === 1, t('merged doors: need-led line + quiz'));
+    ok((await p.$$('#sellers select option')).length === 9, t('merged sellers: product picker'));
+
     // presence band: final numbers, sources, presence_view at 50%
     await p.locator('#v2-presence').scrollIntoViewIfNeeded();
     await p.waitForTimeout(1800);
@@ -51,7 +60,7 @@ const ok = (c, m) => (c ? passes++ : (fails.push(m), console.log('FAIL ' + m)));
     ok(find('presence_view').length === 1 && find('presence_view')[0].page === '/', t('presence_view once with page'));
 
     // doors → persona pages
-    const doorHrefs = await p.$$eval('[aria-labelledby="v2-doors-title"] a', (as) => as.map((a) => a.getAttribute('href')));
+    const doorHrefs = await p.$$eval('#doors li > a', (as) => as.map((a) => a.getAttribute('href')));
     ok(doorHrefs.join() === '/new-gaming-pc,/upgrade,/work-and-play', t('three doors link to the existing persona pages'));
 
     // game check
@@ -103,10 +112,10 @@ const ok = (c, m) => (c ? passes++ : (fails.push(m), console.log('FAIL ' + m)));
     ok(cp && cp.channel === 'copy' && cp.build_id === 'sample-1', t('Copy build → build_share {channel: copy}'));
 
     // find a seller: exact pages + utm_campaign=home (no persona yet)
-    const links = await p.$$eval('#v2-find-seller a', (as) => as.map((a) => a.href));
+    const links = await p.$$eval('#sellers a', (as) => as.map((a) => a.href));
     ok(links.length === 4 && links.every((l) => !/search|\/s\?/.test(l) && l.includes('utm_source=amdhub&utm_medium=referral&utm_campaign=home')), t('seller links: exact pages, utm_campaign=home'));
-    await p.locator('#v2-find-seller').scrollIntoViewIfNeeded();
-    await p.click('#v2-find-seller a >> nth=0');
+    await p.locator('#sellers').scrollIntoViewIfNeeded();
+    await p.click('#sellers a >> nth=0');
     const pcl = find('partner_click').pop();
     ok(pcl && pcl.partner_name === 'Amazon' && pcl.partner_type === 'marketplace' && pcl.persona_id === 'home' && !!pcl.product, t('partner_click {partner_name, partner_type, product, persona_id}'));
 
@@ -117,7 +126,7 @@ const ok = (c, m) => (c ? passes++ : (fails.push(m), console.log('FAIL ' + m)));
     const ps = find('persona_select').pop();
     ok(ps && ps.persona_id === 'upgrade' && p.url().endsWith('/upgrade'), t('persona_select {persona_id} and route to persona page'));
     await p.goto(BASE + '/', { waitUntil: 'networkidle' });
-    const l2 = await p.$eval('#v2-find-seller a', (a) => a.href);
+    const l2 = await p.$eval('#sellers a', (a) => a.href);
     ok(l2.includes('utm_campaign=upgrade'), t('utm_campaign = persona id once a persona is saved'));
 
     // phone bar

@@ -10,16 +10,16 @@ export const NEW_HOME_V2 = …; // set to false, or build with VITE_NEW_HOME_V2=
 - **Flag off:** the homepage is exactly the locked build. The new code is dropped from the bundle (verified: no V2 strings in the output) and all 84 locked checks pass.
 - **Flag on:** the new sections render around the locked ones. All 84 locked checks still pass at 1440 × 900 and 390 × 844, `check:acceptance` passes, and all 58 new-layer checks pass.
 
-## Page order with the flag on
+## Page order with the flag on (no repeated sections)
 
-1. **New:** Hero "You already play on AMD."
+1. **Merged hero** (new design). Brought over from the original hero: live offer chip, claim footnote ¹ with its source line, and *View in 3D* (the original chip viewer).
 2. **New:** Presence band (four stats that count up)
-3. **New:** Three doors, linking to the existing persona pages
+3. **Merged "What are you building?"** (new design, owns `#doors`). Brought over from the original doors: need-led line ("Play games without a graphics card."), the two-question quiz, the "Saved" badge, each door's page contents and budget.
 4. **New:** "Will my game run?" check
 5. **New:** Know what you're getting (three 30-second explainers)
 6. **New:** Builds from India's creators (sample data)
-7. **Locked:** Hero → Persona doors → From ₹ strip → FPS → Build-your-PC journey → Sellers → Guides
-8. **New:** Find a seller (quiet)
+7. **Original, unchanged:** From ₹ strip → FPS in your games → Build-your-PC journey → Guides
+8. **Merged Find a seller** (new quiet design, owns `#sellers`). Brought over from the original Sellers: product picker (shared with *View sellers* on the product cards), persona-first ordering, "Best match for you", verified ticks, kinds and seller CTAs.
 9. **New, phones only:** bottom bar with "Will my game run?" and "Find a seller"
 
 ## Files added
@@ -52,9 +52,12 @@ export const NEW_HOME_V2 = …; // set to false, or build with VITE_NEW_HOME_V2=
 
 | File | Change | Why |
 | --- | --- | --- |
-| `src/pages/Home.tsx` | +4 lines: two imports and `{NEW_HOME_V2 && <HomeV2Lead />}` / `{NEW_HOME_V2 && <HomeV2Tail />}` around the locked sections; nothing renamed, reordered or removed | The only way to mount the new sections on the homepage |
+| `src/pages/Home.tsx` | Imports plus a second layout used only when `NEW_HOME_V2` is on (merged hero → sentinel → new sections → original strip, FPS, build journey and guides → merged sellers). The flag-off layout is the original, line for line | Mount the new layer and, as you asked, merge the three repeated sections instead of showing old and new versions |
 | `vite.config.ts` | Single-file inliner also accepts `.webm` / `.mp4` | So the single HTML file carries the placeholder videos |
 | `package.json` | Added the `check:locked` and `check:v2` scripts | To run the new regression checks |
+| `scripts/acceptance.cjs` | The "anchor jump past the hero" test clicks the hero's *Will my game run?* when the merged hero is present (the original *Start building* is no longer there) | The merged hero has no Start building button; the check itself is unchanged |
+
+The original `Hero`, `PersonaDoors` and `Sellers` components are untouched; they render whenever the flag is off. The merged sections reuse the original data, the `OfferChip` component, the chip viewer, the persona store and the `selectedProduct` store.
 
 No other locked file was changed. Event names are reused, not edited: the locked `track()` and `analytics.ts` are untouched, and new pushes go through `trackV2`.
 
@@ -64,10 +67,10 @@ No other locked file was changed. Event names are reused, not edited: the locked
 | --- | --- | --- |
 | `presence_view` *(new)* | `page` | `section` |
 | `explainer_play` *(new)* | `video_id`, `percent_watched` | `section` |
-| `persona_select` *(reused)* | `persona_id` | `persona`, `section`, `method: door_v2` |
+| `persona_select` *(reused)* | `persona_id` | `persona`, `section: persona_doors`, `method` (`door` / `quiz` / `need_line`), same values as the original doors |
 | `game_check` *(reused)* | `game`, `screen`, `budget_band` | `build_id`, `product`, `resolution`, `section` |
 | `build_save` / `build_share` *(reused)* | `build_id`, `channel` (`device` / `whatsapp` / `copy`) | `build`, `method`, `section` |
-| `partner_click` *(reused)* | `partner_name`, `partner_type`, `product`, `persona_id` | `seller_name`, `link_url`, `utm_campaign`, `section` |
+| `partner_click` *(reused)* | `partner_name`, `partner_type`, `product`, `persona_id` | `seller_name`, `link_url`, `utm_campaign`, `section: sellers` (same as the original section) |
 | `builder_start` *(locked event, unchanged)* | — | Fired by "See the full build →" with `section: v2_game_check` |
 
 ---
@@ -76,7 +79,9 @@ No other locked file was changed. Event names are reused, not edited: the locked
 
 For each one, the version currently live leaves the locked feature untouched.
 
-**C1 · Hero.** The locked hero ("The fastest gaming processors…") is a locked feature, so as instructed the new hero is added **above** it. The locked hero (Start building, offer chip, View in 3D) now sits on the second screen, and the page has two `<h1>`s.
+**Resolved by your instruction ("merge the repeated sections into the new design"):** C1, C3 and C4 below are now merged as described under *Page order*. The remaining collisions are still open.
+
+**C1 · Hero (resolved: merged).** The locked hero ("The fastest gaming processors…") is a locked feature, so as instructed the new hero is added **above** it. The locked hero (Start building, offer chip, View in 3D) now sits on the second screen, and the page has two `<h1>`s.
 - **A (live):** keep both heroes.
 - **B:** hide the locked hero when the flag is on. That edits a locked page, and its 3D chip viewer and offer chip would need a new home.
 
@@ -84,11 +89,11 @@ For each one, the version currently live leaves the locked feature untouched.
 - **A (live):** keep the locked header.
 - **B:** with the flag on, restyle the header button as a quiet "Find a seller" outline. That changes a locked component and the earlier first-screen rule.
 
-**C3 · Two "What are you building?" sections.** The new doors and the locked persona doors (different copy, plus the need-led line and the two-question quiz) both appear.
+**C3 · Two "What are you building?" sections (resolved: merged).** The new doors and the locked persona doors (different copy, plus the need-led line and the two-question quiz) both appear.
 - **A (live):** keep both.
 - **B:** hide the locked doors when the flag is on, and move the need-led line and quiz into the new doors.
 
-**C4 · Two seller sections, two UTM fallbacks.** The locked Sellers section (product picker; `utm_campaign=general` without a persona) and the new quiet Find a seller section (`utm_campaign=home`, as briefed) both appear, so reports will show both `general` and `home`.
+**C4 · Two seller sections, two UTM fallbacks (resolved: merged; links use `utm_campaign=home` without a persona, as briefed).** The locked Sellers section (product picker; `utm_campaign=general` without a persona) and the new quiet Find a seller section (`utm_campaign=home`, as briefed) both appear, so reports will show both `general` and `home`.
 - **A (live):** keep both.
 - **B:** hide the locked Sellers when the flag is on, or align both on one fallback value.
 

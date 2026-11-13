@@ -226,6 +226,6 @@ export const phoneBar = {
 
 export const anchors = {
   check: 'v2-game-check',
-  seller: 'v2-find-seller',
+  seller: 'sellers',
   presence: 'v2-presence',
 };

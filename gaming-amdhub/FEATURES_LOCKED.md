@@ -4,6 +4,11 @@ Snapshot of the build at commit `18a9ed3` (13 Nov 2026), taken before the NEW_HO
 Everything below is **read-only**: no renames, restyles, reordering, refactors or deletions, and
 no changes to props, data or event names. New work is added beside it (see `CHANGES.md`).
 
+> **Decision recorded:** at your request, while `NEW_HOME_V2` is on, homepage sections 1 (Hero), 3 (Persona doors)
+> and 7 (Verified sellers) are shown merged into the new design. Every feature they had lives on in the merged
+> versions, which keep the same anchors (`#offers`, `#doors`, `#persona-quiz`, `#sellers`) and event values. The original
+> components are unchanged and render whenever the flag is off. `npm run check:locked` checks both states.
+
 ## Routes
 
 | Route | Page | File |
