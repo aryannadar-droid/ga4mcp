@@ -4,6 +4,9 @@ const SYSTEM_PROMPT = `You are a senior CRO and persona strategist at a digital 
 
 Work through these steps internally. Output ONLY the final JSON described at the end.
 
+SCOPE
+The request says either "SCOPE: WHOLE SITE" (lock TGs for the brand) or "SCOPE: THIS PAGE ONLY". For THIS PAGE ONLY, the page rules in the request override the brand-wide parts of every step below.
+
 STEP 1 - READ THE BRAND
 What do they sell, at what positioning, how do they sell (D2C, lead-gen, marketplace, offline-assisted), who USES the product versus who PAYS for it.
 
@@ -69,6 +72,7 @@ Return a single JSON object and nothing else (no markdown fences):
     "content_quality_note": "",
     "source_pages": [1]
   },
+  "focus": {"product": "", "page_type": "product", "price_shown": ""},
   "audit": {
     "candidates_considered": ["name - one-line situation"],
     "merges": [{"merged": "", "into": "", "reason": ""}],
@@ -88,9 +92,38 @@ Return a single JSON object and nothing else (no markdown fences):
   "flags_for_signoff": ["claims across the whole brand that need client sign-off"]
 }`;
 
-function buildUserPrompt({ origin, pages, tgCount, extraContext, market, language, lockedTgs }) {
+// Extra rules sent when the user scopes the run to the page they are on.
+const PAGE_SCOPE_RULES = `=== SCOPE: THIS PAGE ONLY ===
+The user is on one specific page and wants TGs for what THIS page sells, not for the brand as a whole.
+- Identify the exact product, model, service, plan or offer this page is about. Put it in focus.product (e.g. "iPhone 17 Pro, 256 GB"). focus.page_type is one of "product", "category", "service", "landing", "home", "article", "other". focus.price_shown is the price exactly as shown on the page, or "".
+- Every TG must be a realistic buyer of THIS product. Define them by situations that lead to this product: upgrading from an older model or version, first-time buyer of this category, switching from other brands in the market, buying for someone else, needing a specific feature, variant or price tier shown on the page.
+- Split TGs using what is specific to this page: variants, sizes, price tiers, use cases, bundles or features listed here. Generic brand-lover TGs are not allowed.
+- brand_summary.what_they_sell describes this product. brand_summary.positioning is how this product sits within the brand's range, if the page shows it.
+- Reasons to buy must come from features, specs, prices, variants, offers or claims on this page, citing page 1. Anything else is a hypothesis.
+- offer is something actually available on this page (variant, bundle, financing, trade-in, free delivery). If the page shows none, say what offer to test and tag it a hypothesis in flags_for_signoff.
+- buy_score rates how likely each TG is to buy THIS product, not the brand in general.
+- If the page is not about one product (a homepage, category, blog post), say so in brand_summary.content_quality_note and lock TGs for what the page is clearly pushing.`;
+
+function buildUserPrompt({ origin, pages, tgCount, extraContext, market, language, lockedTgs, scope, product }) {
   const parts = [];
   parts.push(`Brand website: ${origin}`);
+  if (scope === "page") {
+    parts.push(`Page URL: ${pages[0] ? pages[0].url : origin}`);
+    parts.push("");
+    parts.push(PAGE_SCOPE_RULES);
+    if (product && (product.name || product.price || product.breadcrumbs)) {
+      parts.push("Structured data found on the page:");
+      if (product.name) parts.push(`- Product: ${product.name}`);
+      if (product.brand) parts.push(`- Brand: ${product.brand}`);
+      if (product.price) parts.push(`- Price: ${product.price}`);
+      if (product.availability) parts.push(`- Availability: ${product.availability}`);
+      if (product.rating) parts.push(`- Rating shown: ${product.rating}`);
+      if (product.breadcrumbs) parts.push(`- Breadcrumbs: ${product.breadcrumbs}`);
+    }
+    parts.push("");
+  } else {
+    parts.push("SCOPE: WHOLE SITE");
+  }
   parts.push(`Market: ${market || "Global"}`);
   parts.push(`Copy language: ${language || "English"}`);
   if (lockedTgs && lockedTgs.length) {

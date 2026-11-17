@@ -64,6 +64,7 @@ const settingsCache = {
   tgCount: 3,
   market: "Global",
   language: "English",
+  scope: "site",
 };
 
 async function getSettings() {
@@ -75,6 +76,7 @@ async function getSettings() {
     tgCount: 3,
     market: "Global",
     language: "English",
+    scope: "site",
     // v0.2 keys, migrated below
     apiKey: "",
     model: "",
@@ -279,6 +281,14 @@ async function updateTarget() {
   const tab = await activeTab();
   const ok = tab && tab.url && /^https?:/.test(tab.url);
   $("siteName").textContent = ok ? new URL(tab.url).hostname.replace(/^www\./, "") : "Open a brand's website";
+  let path = $("sitePath");
+  if (!path) {
+    path = el("span", "path");
+    path.id = "sitePath";
+    $("siteName").after(path);
+  }
+  const p = ok ? new URL(tab.url).pathname.replace(/\/+$/, "") : "";
+  path.textContent = settingsCache.scope === "page" && ok ? (p || "/") + "  ← only this page" : "";
   const fav = $("favicon");
   if (ok && tab.favIconUrl && /^https?:|^data:/.test(tab.favIconUrl)) fav.src = tab.favIconUrl;
   else fav.removeAttribute("src");
@@ -374,6 +384,44 @@ function extractFromLivePage() {
     .map((h) => ({ level: Number(h.tagName[1]), text: clean(h.innerText).slice(0, 90), pos: Math.round((top(h) / docH) * 100) }))
     .filter((h) => h.text);
 
+  // Product details from structured data, meta tags and breadcrumbs (for "This page" runs).
+  const product = {};
+  const walk = (node) => {
+    if (!node || typeof node !== "object" || product.name) return;
+    if (Array.isArray(node)) return node.forEach(walk);
+    const type = [].concat(node["@type"] || []).join(" ");
+    if (/Product|Service|Offer|Course|SoftwareApplication/i.test(type) && node.name) {
+      product.name = clean(String(node.name)).slice(0, 120);
+      const b = node.brand;
+      product.brand = clean(typeof b === "object" && b ? b.name || "" : String(b || "")).slice(0, 60);
+      const o = [].concat(node.offers || [])[0];
+      if (o) {
+        const price = o.price || o.lowPrice || (o.priceSpecification && o.priceSpecification.price);
+        if (price) product.price = `${o.priceCurrency || ""} ${price}${o.highPrice ? " – " + o.highPrice : ""}`.trim();
+        if (o.availability) product.availability = String(o.availability).replace(/^.*\//, "");
+      }
+      const ar = node.aggregateRating;
+      if (ar && ar.ratingValue) product.rating = `${ar.ratingValue}${ar.reviewCount ? " from " + ar.reviewCount + " reviews" : ""}`;
+    }
+    Object.values(node).forEach((v) => typeof v === "object" && walk(v));
+  };
+  document.querySelectorAll('script[type="application/ld+json"]').forEach((s) => {
+    try {
+      walk(JSON.parse(s.textContent));
+    } catch (e) {}
+  });
+  const metaVal = (sel) => {
+    const m = document.querySelector(sel);
+    return m ? clean(m.getAttribute("content")) : "";
+  };
+  if (!product.name && /product/i.test(metaVal('meta[property="og:type"]'))) product.name = metaVal('meta[property="og:title"]');
+  if (!product.price) {
+    const amt = metaVal('meta[property="product:price:amount"], meta[property="og:price:amount"]');
+    if (amt) product.price = `${metaVal('meta[property="product:price:currency"], meta[property="og:price:currency"]')} ${amt}`.trim();
+  }
+  const crumb = document.querySelector('nav[aria-label*="readcrumb" i], [class*="breadcrumb" i], ol[itemtype*="BreadcrumbList"]');
+  if (crumb) product.breadcrumbs = clean(crumb.innerText).replace(/\s*[›>\/|»]\s*/g, " > ").slice(0, 160);
+
   return {
     url: location.href,
     title: clean(document.title),
@@ -381,6 +429,7 @@ function extractFromLivePage() {
     headings,
     text,
     links,
+    product,
     anatomy: {
       url: location.href,
       title: clean(document.title),
@@ -484,7 +533,7 @@ function siteLinks(links, origin) {
   return out.slice(0, 80);
 }
 
-async function readSite(tab, onNote, budget) {
+async function readSite(tab, onNote, budget, scope) {
   const origin = new URL(tab.url).origin;
 
   onNote("Reading the page you have open");
@@ -494,10 +543,16 @@ async function readSite(tab, onNote, budget) {
   });
   const pages = [];
   const failed = [];
-  const current = { ...live, text: live.text.slice(0, budget.home), via: "tab", total: live.text.length };
+  // One page gets the reading budget that would otherwise go on the extra pages.
+  const homeBudget = scope === "page" ? Math.round(budget.home * 1.6) : budget.home;
+  const current = { ...live, text: live.text.slice(0, homeBudget), via: "tab", total: live.text.length };
   delete current.links;
   delete current.anatomy;
+  delete current.product;
   pages.push(current);
+  if (scope === "page") {
+    return { origin, pages, failed, links: siteLinks(live.links, origin), anatomy: live.anatomy, product: live.product || {}, scope };
+  }
 
   // Make sure we also have the homepage if the open tab is an inner page.
   const livePath = new URL(live.url).pathname.replace(/\/+$/, "") || "/";
@@ -515,7 +570,7 @@ async function readSite(tab, onNote, budget) {
       pages.push({ ...r.value, text: r.value.text.slice(0, budget.page), via: "fetched", total: r.value.text.length });
     }
   });
-  return { origin, pages, failed, links: siteLinks(live.links, origin), anatomy: live.anatomy };
+  return { origin, pages, failed, links: siteLinks(live.links, origin), anatomy: live.anatomy, product: live.product || {}, scope: "site" };
 }
 
 // ---------- progress + toasts ----------
@@ -600,7 +655,13 @@ function setBusy(on) {
   $("again").disabled = on;
   document.querySelectorAll(".kit-btn, .tg-act").forEach((b) => (b.disabled = on));
   if ($("sheetRerun")) $("sheetRerun").disabled = on;
-  $("ctaText").textContent = on ? "Snooping around..." : lastReport ? "Run it again" : "Find my TGs";
+  $("ctaText").textContent = on
+    ? "Snooping around..."
+    : settingsCache.scope === "page"
+    ? "Find TGs for this page"
+    : lastReport
+    ? "Run it again"
+    : "Find my TGs";
 }
 
 // ---------- rendering helpers ----------
@@ -797,6 +858,10 @@ function renderBrand(r, meta) {
   const top = el("div", "brand-top");
   append(top, el("h2", null, bs.brand || new URL(meta.origin).hostname), el("span", "brand-meta", [meta.market, meta.language].filter(Boolean).join(" · ")));
   card.appendChild(top);
+  if (meta.scope === "page") {
+    const f = r.focus;
+    card.appendChild(el("span", "focus-chip", `🎯 This page only: ${f.product || new URL(meta.pageUrl).pathname}${f.price_shown ? " · " + f.price_shown : ""}`));
+  }
   if (bs.what_they_sell) card.appendChild(el("p", "brand-sells", bs.what_they_sell));
   if (bs.positioning || bs.who_pays_vs_uses) {
     const more = el("details", "more");
@@ -1720,7 +1785,8 @@ function compactSetup(on) {
   if (on && lastMeta) {
     const host = new URL(lastMeta.origin).hostname.replace(/^www\./, "");
     const n = lastReport && lastReport.tgs ? lastReport.tgs.length : 0;
-    $("compactText").textContent = [host, `${n} TGs`, lastMeta.market].filter(Boolean).join(" · ");
+    const focus = lastMeta.scope === "page" ? normalise(lastReport).focus.product || new URL(lastMeta.pageUrl).pathname : "";
+    $("compactText").textContent = [focus || host, focus ? "this page" : "", `${n} TGs`, lastMeta.market].filter(Boolean).join(" · ");
   }
 }
 
@@ -1826,7 +1892,11 @@ async function analyze() {
 
     // Locked TGs carry over when re-running the same brand.
     const origin = new URL(tab.url).origin;
-    const keep = lastReport && lastMeta && lastMeta.origin === origin ? (lastReport.tgs || []).filter((t) => t && t._locked) : [];
+    const scope = s.scope === "page" ? "page" : "site";
+    const pageUrl = tab.url.split("#")[0];
+    const sameTarget =
+      lastReport && lastMeta && lastMeta.origin === origin && (lastMeta.scope || "site") === scope && (scope === "site" || lastMeta.pageUrl === pageUrl);
+    const keep = sameTarget ? (lastReport.tgs || []).filter((t) => t && t._locked) : [];
     const tgCount = Number(s.tgCount) || 3;
     const fresh = tgCount - keep.length;
     if (keep.length && fresh <= 0) {
@@ -1846,11 +1916,14 @@ async function analyze() {
     startProgress();
     progressOn = true;
 
-    const site = await readSite(tab, (n) => ($("readNote").textContent = n), p.budget);
+    const site = await readSite(tab, (n) => ($("readNote").textContent = n), p.budget, scope);
     if (!site.pages.length || site.pages[0].text.length < 200) {
       throw new UserError("This page is basically a blank stare. Open the brand's homepage and try again.");
     }
-    $("readNote").textContent = `Read ${site.pages.length} page${site.pages.length > 1 ? "s" : ""}`;
+    $("readNote").textContent =
+      scope === "page"
+        ? `Read this page only${site.product && site.product.name ? ": " + site.product.name : ""}`
+        : `Read ${site.pages.length} page${site.pages.length > 1 ? "s" : ""}`;
 
     setStep("think");
     progress.thinkStart = Date.now();
@@ -1866,6 +1939,8 @@ async function analyze() {
         market: s.market,
         language: s.language,
         lockedTgs: lockedNorm,
+        scope,
+        product: site.product,
       });
     const note = (n) => ($("thinkNote").textContent = n);
     let reply;
@@ -1915,6 +1990,8 @@ async function analyze() {
       market: s.market,
       language: s.language,
       tgCount,
+      scope,
+      pageUrl,
     };
     runId = "r" + Date.now().toString(36);
     view = "tgs";
@@ -1928,7 +2005,7 @@ async function analyze() {
     const hot = r.tgs.find((t) => t.hot);
     showToast(
       "Locked and loaded.",
-      ` Read ${site.pages.length} pages with ${reply.model} in ${secs}s.` + (hot ? ` Hottest TG: ${hot.name}.` : "") + (keep.length ? ` Kept ${keep.length} locked.` : "")
+      ` Read ${scope === "page" ? "this page" : site.pages.length + " pages"} with ${reply.model} in ${secs}s.` + (hot ? ` Hottest TG: ${hot.name}.` : "") + (keep.length ? ` Kept ${keep.length} locked.` : "")
     );
   } catch (e) {
     showToast(pick(ERROR_TITLES), errorText(e), true);
@@ -1961,6 +2038,8 @@ async function rerollTg(order) {
       market: lastMeta.market,
       language: lastMeta.language,
       lockedTgs: others,
+      scope: lastMeta.scope,
+      product: lastSite.product,
     });
     const reply = await aiCall(s, user);
     const rep = parseModelJson(reply.text);
@@ -2065,7 +2144,7 @@ async function renderHistory() {
       append(
         info,
         el("b", null, fmtDate(run.at)),
-        el("small", null, [run.meta.model, run.meta.market].filter(Boolean).join(" · ")),
+        el("small", null, [run.meta.scope === "page" ? "🎯 " + (r.focus.product || new URL(run.meta.pageUrl).pathname) : "Whole site", run.meta.model, run.meta.market].filter(Boolean).join(" · ")),
         el("small", "hist-lineup", r.tgs.map((t) => `${t.locked ? "🔒" : ""}${t.name} ${t.stars == null ? "" : "★" + t.stars}`).join(" · ")),
         kits.length ? el("small", "muted", "Kits: " + kits.map((k) => (LENSES[k] ? LENSES[k].label : k)).join(", ")) : null
       );
@@ -2458,9 +2537,28 @@ async function buildSlides() {
 
 // ---------- setup controls ----------
 
+const SCOPE_HINTS = {
+  site: "Reads this page plus a few key pages it picks. TGs for the brand.",
+  page: "Reads only the page you're on. TGs for exactly what it sells.",
+};
+
+function setScope(v) {
+  settingsCache.scope = v === "page" ? "page" : "site";
+  document.querySelectorAll("#scope button").forEach((b) => b.setAttribute("aria-checked", String(b.dataset.scope === settingsCache.scope)));
+  $("scopeHint").textContent = SCOPE_HINTS[settingsCache.scope];
+  if (!busy) $("ctaText").textContent = settingsCache.scope === "page" ? "Find TGs for this page" : lastReport ? "Run it again" : "Find my TGs";
+  updateTarget();
+}
+
 function setTgCount(n) {
   settingsCache.tgCount = n;
-  document.querySelectorAll("#tgCount button").forEach((b) => b.setAttribute("aria-checked", String(Number(b.dataset.n) === n)));
+  document.querySelectorAll("#scope button").forEach((b) =>
+  b.addEventListener("click", () => {
+    setScope(b.dataset.scope);
+    chrome.storage.local.set({ scope: settingsCache.scope });
+  })
+);
+document.querySelectorAll("#tgCount button").forEach((b) => b.setAttribute("aria-checked", String(Number(b.dataset.n) === n)));
   $("tgHint").textContent = TG_HINTS[n] || "";
 }
 
@@ -2482,6 +2580,7 @@ async function init() {
   $("tagline").textContent = pick(TAGLINES);
   const s = await getSettings();
   setTgCount(Number(s.tgCount) || 3);
+  setScope(s.scope);
   fillSelect("market", MARKETS, s.market);
   fillSelect("language", LANGUAGES, s.language);
   renderPill();
@@ -2489,6 +2588,12 @@ async function init() {
   if (!isReady(s.provider, s)) openDrawer();
 }
 
+document.querySelectorAll("#scope button").forEach((b) =>
+  b.addEventListener("click", () => {
+    setScope(b.dataset.scope);
+    chrome.storage.local.set({ scope: settingsCache.scope });
+  })
+);
 document.querySelectorAll("#tgCount button").forEach((b) =>
   b.addEventListener("click", () => {
     setTgCount(Number(b.dataset.n));

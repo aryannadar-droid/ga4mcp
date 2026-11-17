@@ -179,6 +179,11 @@ function normalise(report) {
       overlap_check: str(audit.overlap_check),
     },
     tgs,
+    focus: {
+      product: str((r.focus || {}).product),
+      page_type: str((r.focus || {}).page_type),
+      price_shown: str((r.focus || {}).price_shown),
+    },
     flags_for_signoff: arr(r.flags_for_signoff).map(str),
   };
 }
@@ -254,14 +259,21 @@ function marketLine(meta) {
   return meta && (meta.market || meta.language) ? `Market: ${meta.market || "Global"} | Copy language: ${meta.language || "English"}` : "";
 }
 
+// "This page only: iPhone 17 (https://...)" for page-scoped runs, "" otherwise.
+function scopeLine(r, meta) {
+  if (!meta || meta.scope !== "page") return "";
+  return `Scope: this page only${r.focus.product ? ": " + r.focus.product : ""}${r.focus.price_shown ? " (" + r.focus.price_shown + ")" : ""} | ${meta.pageUrl || ""}`;
+}
+
 function toMarkdown(report, meta, lenses) {
   const r = normalise(report);
   const L = [];
   const brand = r.brand_summary.brand || (meta && meta.origin) || "Brand";
-  L.push(`# Who's buying ${brand}?`);
+  L.push(`# Who's buying ${meta && meta.scope === "page" && r.focus.product ? r.focus.product : brand}?`);
   if (meta) {
     L.push(`Source: ${meta.origin} | Generated ${meta.date} | Pages read: ${meta.pages.length}${meta.model ? " | Model: " + meta.model : ""}`);
     if (marketLine(meta)) L.push(marketLine(meta));
+    if (scopeLine(r, meta)) L.push(scopeLine(r, meta));
   }
   L.push("");
   L.push("## The brand, decoded");
@@ -428,7 +440,8 @@ ol.lineup .nm{flex:1;font-weight:600}.score{font-variant-numeric:tabular-nums;co
 ${typeof LENS_REPORT_CSS === "string" ? LENS_REPORT_CSS : ""}
 @media print{body{background:#fff}.card{box-shadow:none}}
 </style></head><body>
-<h1>Who's buying ${esc(brand)}?</h1>
+<h1>Who's buying ${esc(meta && meta.scope === "page" && r.focus.product ? r.focus.product : brand)}?</h1>
+${scopeLine(r, meta) ? `<p class="meta"><b>${esc(scopeLine(r, meta))}</b></p>` : ""}
 <p class="meta">${meta ? esc(meta.origin) + " · " + esc(meta.date) + " · " + meta.pages.length + " pages read" + (meta.model ? " · " + esc(meta.model) : "") + (marketLine(meta) ? " · " + esc(marketLine(meta)) : "") : ""} · Made with WhoseMyTG</p>
 <section class="card"><div class="eyebrow">The brand, decoded</div>
 ${row("Sells:", r.brand_summary.what_they_sell)}

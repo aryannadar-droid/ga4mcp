@@ -1031,3 +1031,9 @@ div.editable, p.editable, h3.editable, h4.editable { display: block; }
 .hist-run { grid-template-columns: 18px minmax(0, 1fr) auto; }
 .lim-row, .now { grid-template-columns: minmax(0, 1fr) auto auto; }
 .lim-text, .now span:first-child, .tg-name b, .kit-text b, .gap-head b { overflow-wrap: anywhere; min-width: 0; }
+
+/* Scope switch */
+.seg.seg-2 { grid-template-columns: 1fr 1fr; }
+.seg.seg-2 button { font-size: 13.5px; }
+.target-text .path { display: block; font-size: 11.5px; font-weight: 600; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.focus-chip { display: inline-flex; align-items: center; gap: 4px; margin-top: 6px; font-size: 11.5px; font-weight: 800; padding: 2px 9px; border-radius: 99px; background: var(--yellow-soft); border: 1px solid var(--edge); max-width: 100%; overflow-wrap: anywhere; }

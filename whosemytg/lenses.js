@@ -164,6 +164,9 @@ function buildLensUser(id, { report, site, market, language, budget, viewport })
   P.push(`Brand: ${bs.brand} (${site.origin})`);
   P.push(`Sells: ${bs.what_they_sell}`);
   P.push(`Positioning: ${bs.positioning}`);
+  if (r.focus.product) {
+    P.push(`FOCUS: these TGs are for one product page, ${r.focus.product}${r.focus.price_shown ? " (" + r.focus.price_shown + ")" : ""}. Keep every output about this product, not the brand in general.`);
+  }
   P.push(`Market: ${market || "Global"}`);
   P.push(`Copy language: ${language || "English"}`);
   P.push("");

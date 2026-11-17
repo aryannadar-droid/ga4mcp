@@ -1,4 +1,4 @@
-WHOSEMYTG v0.6.1 - how to load it in Chrome
+WHOSEMYTG v0.7.0 - how to load it in Chrome
 
 1. Unzip this folder somewhere permanent (Chrome reads from it every time, so don't delete it).
 2. In Chrome, open chrome://extensions
@@ -26,7 +26,12 @@ First-time setup (once per person): bring your own AI key
 
 Using it:
 8. Open the brand's homepage in the tab.
-9. Pick how many TGs (2-5), the market and the copy language, then click "Find my TGs". Chrome asks once per site to allow reading it: click Allow.
+9. Pick what it should read:
+   - Whole site: the page you're on plus a few key pages it picks. TGs for the brand.
+   - This page: only the page you're on (e.g. Apple's iPhone 17 page). TGs for exactly that product,
+     using its features, variants, price and offers. It also reads the product name, price and
+     breadcrumbs the page publishes for search engines.
+   Then pick how many TGs (2-5), the market and the copy language, and click the orange button. Chrome asks once per site to allow reading it: click Allow.
 10. Wait 20-60 seconds. Results come in three views (switch at the top): TGs, Toolkit, Sources.
     Tap a TG row to open it; kit results open full-panel with a back button. The panel stays light on purpose:
     the full detail is in Export. You get:
